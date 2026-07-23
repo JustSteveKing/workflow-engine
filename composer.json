@@ -1,0 +1,71 @@
+{
+    "name": "juststeveking/workflow-engine",
+    "description": "A signal-driven, step-based workflow engine for Laravel.",
+    "keywords": [
+        "laravel",
+        "workflow",
+        "workflow-engine",
+        "state-machine",
+        "saga"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/juststeveking/workflow-engine",
+    "support": {
+        "issues": "https://github.com/juststeveking/workflow-engine/issues",
+        "source": "https://github.com/juststeveking/workflow-engine"
+    },
+    "authors": [
+        {
+            "role": "Developer",
+            "name": "Steve McDougall",
+            "email": "steve@juststeveking.com",
+            "homepage": "https://juststeveking.link"
+        }
+    ],
+    "require": {
+        "php": "^8.5",
+        "juststeveking/state-machine": "^1.0",
+        "laravel/framework": "^13.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^3.0 || ^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "JustSteveKing\\WorkflowEngine\\": "src/",
+            "JustSteveKing\\WorkflowEngine\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JustSteveKing\\WorkflowEngine\\Tests\\": "tests/"
+        },
+        "classmap": [
+            "examples/"
+        ]
+    },
+    "scripts": {
+        "test": "pest",
+        "test:coverage": "pest --coverage",
+        "lint": "pint",
+        "stan": "phpstan analyse --memory-limit=1G"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JustSteveKing\\WorkflowEngine\\WorkflowEngineServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

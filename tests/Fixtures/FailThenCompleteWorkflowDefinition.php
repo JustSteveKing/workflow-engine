@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
+
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+
+final class FailThenCompleteWorkflowDefinition implements WorkflowDefinitionContract
+{
+    public static function name(): string
+    {
+        return 'test_fail_then_complete_workflow';
+    }
+
+    public function steps(): array
+    {
+        return [
+            FailThenCompleteStep::class,
+        ];
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "preset": "per",
+    "rules": {
+        "declare_strict_types": true,
+        "yoda_style": {
+            "equal": true,
+            "identical": true,
+            "less_and_greater": false
+        }
+    }
+}
