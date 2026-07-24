@@ -20,7 +20,9 @@ domain events report every transition. Two tables: `workflow_instances`,
 composer install
 ```
 
-Requires PHP `^8.5`, Laravel 13, and `juststeveking/state-machine`, plus a
+Requires PHP `^8.5`, the Laravel 13 `illuminate/*` components (bus, console,
+contracts, database, queue, support — not the full `laravel/framework`), and
+`juststeveking/state-machine`, plus a
 database with transactions + row locking (tests use Testbench with in-memory
 SQLite; no external services). It's a package, exercised through
 `orchestra/testbench`.
@@ -167,16 +169,24 @@ methods) → `EloquentWorkflowRepository` (`create()`/`save()`) →
 
 ## Gotchas
 
+- Jobs are dispatched through the injected `Illuminate\Contracts\Bus\Dispatcher`
+  (`$this->bus->dispatch(new Job(...))`), configured with the bus `Queueable`
+  trait's `onConnection`/`onQueue`/`delay`. The package requires component-level
+  `illuminate/*` packages, not `laravel/framework`, and uses no
+  `Illuminate\Foundation\*` classes or the `config()`/`config_path()`/
+  `database_path()` global helpers (all Foundation-only) — inject
+  `Config\Repository` and use `$app->configPath()`/`databasePath()` instead.
 - Arrow fns returning a `void` call trip PHPStan (`return.void`). The queue
-  dispatch helpers return `PendingDispatch` so `fn () => $this->dispatchX()` is
-  valid; keep that.
+  dispatch helpers return the bus dispatch result (`mixed`), so
+  `fn () => $this->dispatchX()` stays valid; keep them non-`void`.
 - Tests use `RefreshDatabase` (each test in a transaction). The engine's own
   `DB::transaction` nests as a savepoint — that's why side effects are deferred to
   after the closure returns (via `runDeferred`), not via `->afterCommit()`.
 - `WorkflowInstance::fromEloquent()` uses the Eloquent `array`/`datetime` casts
   (`$model->context`, `$model->wake_at`, …) — do not reintroduce manual decoding.
-- Config reads go through typed helpers (`intConfig`, `is_string` guards) because
-  `config()` returns `mixed` and PHPStan rejects casting `mixed` to `int`/`string`.
+- Config reads go through the injected `Config\Repository` behind typed helpers
+  (`intConfig`, `is_string` guards) because `Repository::get()` returns `mixed`
+  and PHPStan rejects casting `mixed` to `int`/`string`.
 - Terminal-status and stale-job no-ops are intentional; a returning `advance` that
   "does nothing" is often correct. Check the "does nothing when advance is called
   on a completed/failed workflow" and stale-timeout tests before changing.

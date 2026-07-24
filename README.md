@@ -583,7 +583,7 @@ When you are testing application code that drives the engine, `Queue::fake()` le
 ## Requirements
 
 - PHP `^8.5`
-- Laravel 13
+- Laravel 13 — the package depends on the individual `illuminate/*` components (bus, console, contracts, database, queue, support) rather than the whole `laravel/framework`
 - [`juststeveking/state-machine`](https://github.com/juststeveking/state-machine), installed as a dependency
 - A configured queue and a running worker for production use
 - A database supporting transactions and row locking, which is any standard Laravel SQL driver

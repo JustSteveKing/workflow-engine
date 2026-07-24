@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine;
 
+use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +38,8 @@ final class WorkflowEngineServiceProvider extends ServiceProvider
             registry: $app->make(WorkflowRegistry::class),
             container: $app,
             events: $app->make(Dispatcher::class),
+            bus: $app->make(BusDispatcher::class),
+            config: $app->make(Repository::class),
         ));
     }
 
@@ -45,11 +49,11 @@ final class WorkflowEngineServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../database/migrations' => database_path('migrations'),
+                __DIR__ . '/../database/migrations' => $this->app->databasePath('migrations'),
             ], 'workflow-engine-migrations');
 
             $this->publishes([
-                __DIR__ . '/../config/workflow-engine.php' => config_path('workflow-engine.php'),
+                __DIR__ . '/../config/workflow-engine.php' => $this->app->configPath('workflow-engine.php'),
             ], 'workflow-engine-config');
 
             $this->commands([

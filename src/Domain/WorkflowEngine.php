@@ -6,9 +6,10 @@ namespace JustSteveKing\WorkflowEngine\Domain;
 
 use Closure;
 use DateTimeInterface;
+use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use JustSteveKing\WorkflowEngine\Contracts\CompensatingStep;
@@ -44,6 +45,8 @@ final readonly class WorkflowEngine
         private WorkflowRegistry $registry,
         private Container $container,
         private Dispatcher $events,
+        private BusDispatcher $bus,
+        private Repository $config,
     ) {}
 
     /**
@@ -527,12 +530,12 @@ final readonly class WorkflowEngine
 
     private function bufferEarlySignals(): bool
     {
-        return (bool) config('workflow-engine.signals.buffer_early', true);
+        return (bool) $this->config->get('workflow-engine.signals.buffer_early', true);
     }
 
     private function intConfig(string $key, int $default): int
     {
-        $value = config($key, $default);
+        $value = $this->config->get($key, $default);
 
         return is_numeric($value) ? (int) $value : $default;
     }
@@ -558,39 +561,39 @@ final readonly class WorkflowEngine
         }
     }
 
-    private function dispatchAdvanceJob(int|string $instanceId, DateTimeInterface|int|null $delay = null): PendingDispatch
+    private function dispatchAdvanceJob(int|string $instanceId, DateTimeInterface|int|null $delay = null): mixed
     {
-        $job = AdvanceWorkflow::dispatch($instanceId);
-        $this->configureQueue($job);
+        $job = new AdvanceWorkflow($instanceId);
+        $this->onWorkflowQueue($job);
 
         if ($delay instanceof DateTimeInterface || (is_int($delay) && $delay > 0)) {
             $job->delay($delay);
         }
 
-        return $job;
+        return $this->bus->dispatch($job);
     }
 
-    private function dispatchTimeoutJob(int|string $instanceId, int $stepIndex, int $delaySeconds): PendingDispatch
+    private function dispatchTimeoutJob(int|string $instanceId, int $stepIndex, int $delaySeconds): mixed
     {
-        $job = TimeoutWorkflowStep::dispatch($instanceId, $stepIndex);
-        $this->configureQueue($job);
+        $job = new TimeoutWorkflowStep($instanceId, $stepIndex);
+        $this->onWorkflowQueue($job);
         $job->delay(Carbon::now()->addSeconds($delaySeconds));
 
-        return $job;
+        return $this->bus->dispatch($job);
     }
 
-    private function dispatchCompensateJob(int|string $instanceId): PendingDispatch
+    private function dispatchCompensateJob(int|string $instanceId): mixed
     {
-        $job = CompensateWorkflow::dispatch($instanceId);
-        $this->configureQueue($job);
+        $job = new CompensateWorkflow($instanceId);
+        $this->onWorkflowQueue($job);
 
-        return $job;
+        return $this->bus->dispatch($job);
     }
 
-    private function configureQueue(PendingDispatch $job): void
+    private function onWorkflowQueue(AdvanceWorkflow|CompensateWorkflow|TimeoutWorkflowStep $job): void
     {
-        $connection = config('workflow-engine.queue.connection');
-        $queue = config('workflow-engine.queue.name');
+        $connection = $this->config->get('workflow-engine.queue.connection');
+        $queue = $this->config->get('workflow-engine.queue.name');
 
         if (is_string($connection)) {
             $job->onConnection($connection);

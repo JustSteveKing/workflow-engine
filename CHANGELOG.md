@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-24
+
+### Changed
+
+- Depend on the individual `illuminate/*` components (`bus`, `console`, `contracts`, `database`, `queue`, `support`) instead of the whole `laravel/framework`. The engine now dispatches jobs through `Illuminate\Contracts\Bus\Dispatcher` and reads configuration through `Illuminate\Contracts\Config\Repository`, and the package no longer uses any `Illuminate\Foundation\*` class or the `config()` / `config_path()` / `database_path()` global helpers. No behavioural change.
+
 ## [0.1.0] - 2026-07-24
 
 ### Added
@@ -25,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Console commands: `workflow:list`, `workflow:show`, `workflow:instances`, `workflow:start`, `workflow:signal`, `workflow:advance`, `workflow:retry`, `workflow:tick`, `workflow:prune`.
 - Publishable config (`workflow-engine`) for queue connection/name, retry backoff, and early-signal buffering.
 
-[Unreleased]: https://github.com/juststeveking/workflow-engine/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/juststeveking/workflow-engine/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/juststeveking/workflow-engine/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/juststeveking/workflow-engine/releases/tag/v0.1.0

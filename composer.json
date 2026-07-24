@@ -24,8 +24,13 @@
     ],
     "require": {
         "php": "^8.5",
-        "juststeveking/state-machine": "^1.0",
-        "laravel/framework": "^13.0"
+        "illuminate/bus": "^13.0",
+        "illuminate/console": "^13.0",
+        "illuminate/contracts": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/queue": "^13.0",
+        "illuminate/support": "^13.0",
+        "juststeveking/state-machine": "^1.0"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",

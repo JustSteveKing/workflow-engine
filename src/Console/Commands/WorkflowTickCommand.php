@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Console\Commands;
 
+use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Carbon;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 use JustSteveKing\WorkflowEngine\Jobs\AdvanceWorkflow;
@@ -19,7 +21,7 @@ final class WorkflowTickCommand extends WorkflowCommand
 
     protected $description = 'Re-dispatch advance jobs for sleeping instances past their wake time.';
 
-    public function handle(): int
+    public function handle(Dispatcher $bus, Repository $config): int
     {
         $limit = $this->intOption('limit', 100);
 
@@ -31,19 +33,23 @@ final class WorkflowTickCommand extends WorkflowCommand
             ->limit($limit)
             ->get();
 
+        $connection = $config->get('workflow-engine.queue.connection');
+        $queue = $config->get('workflow-engine.queue.name');
+
         $count = 0;
 
         foreach ($due as $instance) {
-            $job = AdvanceWorkflow::dispatch($instance->id);
+            $job = new AdvanceWorkflow($instance->id);
 
-            if (is_string($connection = config('workflow-engine.queue.connection'))) {
+            if (is_string($connection)) {
                 $job->onConnection($connection);
             }
 
-            if (is_string($queue = config('workflow-engine.queue.name'))) {
+            if (is_string($queue)) {
                 $job->onQueue($queue);
             }
 
+            $bus->dispatch($job);
             $count++;
         }
 
