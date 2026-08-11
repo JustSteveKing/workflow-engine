@@ -18,7 +18,7 @@ use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowShowCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowSignalCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowStartCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowTickCommand;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepositoryContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowEngine;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
 use JustSteveKing\WorkflowEngine\Repositories\EloquentWorkflowRepository;
@@ -31,16 +31,21 @@ final class WorkflowEngineServiceProvider extends ServiceProvider
 
         $this->app->singleton(WorkflowRegistry::class, fn(): WorkflowRegistry => new WorkflowRegistry());
 
-        $this->app->bind(WorkflowRepositoryContract::class, EloquentWorkflowRepository::class);
+        $this->app->bind(WorkflowRepository::class, EloquentWorkflowRepository::class);
 
-        $this->app->singleton(WorkflowEngine::class, fn(Application $app): WorkflowEngine => new WorkflowEngine(
-            repository: $app->make(WorkflowRepositoryContract::class),
-            registry: $app->make(WorkflowRegistry::class),
-            container: $app,
-            events: $app->make(Dispatcher::class),
-            bus: $app->make(BusDispatcher::class),
-            config: $app->make(Repository::class),
-        ));
+        $this->app->singleton(WorkflowEngine::class, function (Application $app): WorkflowEngine {
+            /** @var WorkflowRepository $repository */
+            $repository = $app->make(WorkflowRepository::class);
+
+            return new WorkflowEngine(
+                repository: $repository,
+                registry: $app->make(WorkflowRegistry::class),
+                container: $app,
+                events: $app->make(Dispatcher::class),
+                bus: $app->make(BusDispatcher::class),
+                config: $app->make(Repository::class),
+            );
+        });
     }
 
     public function boot(): void

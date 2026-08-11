@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Examples;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
@@ -25,7 +25,7 @@ use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
  *         initialContext: ['member_id' => $member->id, 'plan' => 'annual'],
  *     );
  */
-final class MemberRegistrationWorkflow implements WorkflowDefinitionContract
+final class MemberRegistrationWorkflow implements WorkflowDefinition
 {
     public static function name(): string
     {
@@ -43,9 +43,9 @@ final class MemberRegistrationWorkflow implements WorkflowDefinitionContract
     }
 }
 
-final class ChargeMemberStep implements WorkflowStepContract
+final class ChargeMemberStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         // Charge the card through your payment gateway here, then hand control
         // back to the engine and wait for the provider to confirm via webhook.
@@ -67,9 +67,9 @@ final class ChargeMemberStep implements WorkflowStepContract
     }
 }
 
-final class ProvisionAccountStep implements WorkflowStepContract
+final class ProvisionAccountStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         // The signal that resumed us merged its data into the context, so the
         // payment id delivered by the webhook is available here.
@@ -89,9 +89,9 @@ final class ProvisionAccountStep implements WorkflowStepContract
     }
 }
 
-final class AwaitEmailVerificationStep implements WorkflowStepContract
+final class AwaitEmailVerificationStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Mail::to($context->get('member_id'))->send(new VerifyEmail(...));
 
@@ -109,9 +109,9 @@ final class AwaitEmailVerificationStep implements WorkflowStepContract
     }
 }
 
-final class SendWelcomePackStep implements WorkflowStepContract
+final class SendWelcomePackStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Mail::to($context->get('member_id'))->send(new WelcomePack(...));
 

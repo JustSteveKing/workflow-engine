@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Queue;
-use JustSteveKing\StateMachine\Exceptions\InvalidTransitionException;
-use JustSteveKing\StateMachine\StateMachine;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepositoryContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Exceptions\InvalidTransitionException;
+use JustSteveKing\WorkflowEngine\StateMachine\StateMachine;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowEngine;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
@@ -83,7 +83,7 @@ it('prevents a completed instance from being driven into an illegal state', func
     $engine->advance($instance->id);
     $engine->advance($instance->id); // completed
 
-    $completed = app(WorkflowRepositoryContract::class)->findById($instance->id);
+    $completed = app(WorkflowRepository::class)->findById($instance->id);
 
     expect($completed?->isCompleted())->toBeTrue()
         ->and(fn() => $completed?->awaitSignal('anything'))->toThrow(InvalidTransitionException::class);

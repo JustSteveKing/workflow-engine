@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 
-final class BadGotoWorkflowDefinition implements WorkflowDefinitionContract
+final class BadGotoWorkflowDefinition implements WorkflowDefinition
 {
     public static function name(): string
     {

@@ -7,7 +7,7 @@ namespace JustSteveKing\WorkflowEngine\Contracts;
 /**
  * A step that defines its own retry backoff, overriding the package default.
  */
-interface HasRetryBackoff
+interface CustomRetryBackoff
 {
     /**
      * The number of seconds to wait before the given retry attempt.

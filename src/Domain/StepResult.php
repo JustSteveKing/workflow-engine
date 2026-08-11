@@ -10,7 +10,7 @@ final readonly class StepResult
      * @param  array<string, mixed>  $contextUpdates
      */
     private function __construct(
-        public string $outcome, // 'complete', 'await', 'fail', 'goto', 'sleep'
+        public StepOutcome $outcome,
         public ?string $awaitingSignal = null,
         public array $contextUpdates = [],
         public ?string $failureReason = null,
@@ -26,7 +26,7 @@ final readonly class StepResult
     public static function complete(array $contextUpdates = []): self
     {
         return new self(
-            outcome: 'complete',
+            outcome: StepOutcome::Completed,
             contextUpdates: $contextUpdates,
         );
     }
@@ -40,7 +40,7 @@ final readonly class StepResult
     public static function await(string $signal, array $contextUpdates = []): self
     {
         return new self(
-            outcome: 'await',
+            outcome: StepOutcome::Awaiting,
             awaitingSignal: $signal,
             contextUpdates: $contextUpdates,
         );
@@ -54,7 +54,7 @@ final readonly class StepResult
     public static function fail(string $reason): self
     {
         return new self(
-            outcome: 'fail',
+            outcome: StepOutcome::Failed,
             failureReason: $reason,
         );
     }
@@ -68,7 +68,7 @@ final readonly class StepResult
     public static function goto(string $step, array $contextUpdates = []): self
     {
         return new self(
-            outcome: 'goto',
+            outcome: StepOutcome::Goto,
             contextUpdates: $contextUpdates,
             gotoStep: $step,
         );
@@ -83,34 +83,34 @@ final readonly class StepResult
     public static function sleep(int $seconds, array $contextUpdates = []): self
     {
         return new self(
-            outcome: 'sleep',
+            outcome: StepOutcome::Sleeping,
             contextUpdates: $contextUpdates,
             sleepSeconds: $seconds,
         );
     }
 
-    public function isComplete(): bool
+    public function isCompleted(): bool
     {
-        return 'complete' === $this->outcome;
+        return StepOutcome::Completed === $this->outcome;
     }
 
     public function isAwaiting(): bool
     {
-        return 'await' === $this->outcome;
+        return StepOutcome::Awaiting === $this->outcome;
     }
 
     public function isFailed(): bool
     {
-        return 'fail' === $this->outcome;
+        return StepOutcome::Failed === $this->outcome;
     }
 
     public function isGoto(): bool
     {
-        return 'goto' === $this->outcome;
+        return StepOutcome::Goto === $this->outcome;
     }
 
-    public function isSleep(): bool
+    public function isSleeping(): bool
     {
-        return 'sleep' === $this->outcome;
+        return StepOutcome::Sleeping === $this->outcome;
     }
 }

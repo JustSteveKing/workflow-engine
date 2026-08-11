@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace JustSteveKing\WorkflowEngine\Examples;
 
 use JustSteveKing\WorkflowEngine\Contracts\CompensatingStep;
-use JustSteveKing\WorkflowEngine\Contracts\HasRetryBackoff;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+use JustSteveKing\WorkflowEngine\Contracts\CustomRetryBackoff;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
@@ -21,7 +21,7 @@ use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
  * later step fails past its retries, the engine walks the completed
  * compensatable steps backwards and calls compensate() on each.
  */
-final class OrderFulfilmentWorkflow implements WorkflowDefinitionContract
+final class OrderFulfilmentWorkflow implements WorkflowDefinition
 {
     public static function name(): string
     {
@@ -38,9 +38,9 @@ final class OrderFulfilmentWorkflow implements WorkflowDefinitionContract
     }
 }
 
-final class ReserveStockStep implements CompensatingStep, WorkflowStepContract
+final class ReserveStockStep implements CompensatingStep, WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Inventory::reserve($context->get('order_id'));
 
@@ -64,9 +64,9 @@ final class ReserveStockStep implements CompensatingStep, WorkflowStepContract
     }
 }
 
-final class ChargeCustomerStep implements CompensatingStep, HasRetryBackoff, WorkflowStepContract
+final class ChargeCustomerStep implements CompensatingStep, CustomRetryBackoff, WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   $chargeId = Payments::charge($context->get('customer_id'), $context->get('total'));
 
@@ -96,9 +96,9 @@ final class ChargeCustomerStep implements CompensatingStep, HasRetryBackoff, Wor
     }
 }
 
-final class ShipOrderStep implements WorkflowStepContract
+final class ShipOrderStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         // If this throws or returns fail(), the two steps above are compensated
         // in reverse: refund, then release stock.

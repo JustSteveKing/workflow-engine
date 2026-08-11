@@ -13,11 +13,11 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use JustSteveKing\WorkflowEngine\Contracts\CompensatingStep;
-use JustSteveKing\WorkflowEngine\Contracts\HasRetryBackoff;
+use JustSteveKing\WorkflowEngine\Contracts\CustomRetryBackoff;
 use JustSteveKing\WorkflowEngine\Contracts\VersionedWorkflowDefinition;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepositoryContract;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Events\SignalReceived;
 use JustSteveKing\WorkflowEngine\Events\StepCompensationFailed;
 use JustSteveKing\WorkflowEngine\Events\StepCompleted;
@@ -41,7 +41,7 @@ use Throwable;
 final readonly class WorkflowEngine
 {
     public function __construct(
-        private WorkflowRepositoryContract $repository,
+        private WorkflowRepository $repository,
         private WorkflowRegistry $registry,
         private Container $container,
         private Dispatcher $events,
@@ -68,8 +68,8 @@ final readonly class WorkflowEngine
 
         $definitionClass = $this->registry->get($workflowName);
         $definition = $this->container->make($definitionClass);
-        if (! $definition instanceof WorkflowDefinitionContract) {
-            throw new RuntimeException("Workflow definition '{$definitionClass}' must implement WorkflowDefinitionContract.");
+        if (! $definition instanceof WorkflowDefinition) {
+            throw new RuntimeException("Workflow definition '{$definitionClass}' must implement WorkflowDefinition.");
         }
 
         $stepSequence = array_values($definition->steps());
@@ -130,19 +130,19 @@ final readonly class WorkflowEngine
             }
 
             $step = $this->container->make($stepClass);
-            if (! $step instanceof WorkflowStepContract) {
-                throw new RuntimeException("Workflow step '{$stepClass}' must implement WorkflowStepContract.");
+            if (! $step instanceof WorkflowStep) {
+                throw new RuntimeException("Workflow step '{$stepClass}' must implement WorkflowStep.");
             }
 
             // An uncaught exception must not strand the instance in_progress; it
             // is treated as a step failure (subject to retry/compensation).
             try {
-                $result = $step->execute($instance->context);
+                $result = $step->handle($instance->context);
             } catch (Throwable $exception) {
                 return $this->applyStepFailure($instance, $step, $stepClass, $exception->getMessage(), $deferred);
             }
 
-            if ($result->isComplete()) {
+            if ($result->isCompleted()) {
                 return $this->moveForward($instance, $stepClass, $result->contextUpdates, $deferred);
             }
 
@@ -164,7 +164,7 @@ final readonly class WorkflowEngine
                 return $deferred;
             }
 
-            if ($result->isSleep()) {
+            if ($result->isSleeping()) {
                 $instance->mergeContext($result->contextUpdates);
                 $fromIndex = $instance->stepIndex;
                 $instance->markStepCompleted();
@@ -317,7 +317,7 @@ final readonly class WorkflowEngine
                 throw new RuntimeException("Workflow instance {$instanceId} cannot be retried because it is not failed.");
             }
 
-            $instance->reopen();
+            $instance->retry();
             $this->repository->save($instance);
 
             /** @var list<Closure> $deferred */
@@ -455,7 +455,7 @@ final readonly class WorkflowEngine
      * @param  list<Closure>  $deferred
      * @return list<Closure>
      */
-    private function applyStepFailure(WorkflowInstance $instance, WorkflowStepContract $step, string $stepClass, string $reason, array $deferred): array
+    private function applyStepFailure(WorkflowInstance $instance, WorkflowStep $step, string $stepClass, string $reason, array $deferred): array
     {
         $attempt = $instance->attempts + 1;
 
@@ -511,9 +511,9 @@ final readonly class WorkflowEngine
         return false;
     }
 
-    private function retryBackoff(WorkflowStepContract $step, int $attempt): int
+    private function retryBackoff(WorkflowStep $step, int $attempt): int
     {
-        if ($step instanceof HasRetryBackoff) {
+        if ($step instanceof CustomRetryBackoff) {
             return max(0, $step->retryBackoff($attempt));
         }
 

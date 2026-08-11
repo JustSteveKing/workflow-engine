@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Examples;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
@@ -19,7 +19,7 @@ use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
  * cursor but parks the instance until the wake time. Run `workflow:tick` on the
  * scheduler so a sleeper still resumes if its delayed job is ever lost.
  */
-final class AbandonedCartReminderWorkflow implements WorkflowDefinitionContract
+final class AbandonedCartReminderWorkflow implements WorkflowDefinition
 {
     public static function name(): string
     {
@@ -36,9 +36,9 @@ final class AbandonedCartReminderWorkflow implements WorkflowDefinitionContract
     }
 }
 
-final class FirstNudgeStep implements WorkflowStepContract
+final class FirstNudgeStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Mail::to($context->get('email'))->send(new CartReminder(...));
 
@@ -56,9 +56,9 @@ final class FirstNudgeStep implements WorkflowStepContract
     }
 }
 
-final class SecondNudgeStep implements WorkflowStepContract
+final class SecondNudgeStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Mail::to($context->get('email'))->send(new CartReminderWithDiscount(...));
 
@@ -76,9 +76,9 @@ final class SecondNudgeStep implements WorkflowStepContract
     }
 }
 
-final class FinalNudgeStep implements WorkflowStepContract
+final class FinalNudgeStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Mail::to($context->get('email'))->send(new LastChanceCart(...));
 

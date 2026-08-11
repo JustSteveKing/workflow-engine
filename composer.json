@@ -1,19 +1,30 @@
 {
     "name": "juststeveking/workflow-engine",
-    "description": "A signal-driven, step-based workflow engine for Laravel.",
+    "description": "Durable, resumable workflows for the long-running Laravel processes that spend most of their time waiting.",
     "keywords": [
         "laravel",
         "workflow",
         "workflow-engine",
         "state-machine",
-        "saga"
+        "saga",
+        "orchestration",
+        "process-manager",
+        "long-running",
+        "signals"
     ],
     "license": "MIT",
     "homepage": "https://github.com/juststeveking/workflow-engine",
     "support": {
         "issues": "https://github.com/juststeveking/workflow-engine/issues",
-        "source": "https://github.com/juststeveking/workflow-engine"
+        "source": "https://github.com/juststeveking/workflow-engine",
+        "docs": "https://github.com/juststeveking/workflow-engine/blob/main/docs/README.md"
     },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/juststeveking"
+        }
+    ],
     "authors": [
         {
             "role": "Developer",
@@ -23,19 +34,18 @@
         }
     ],
     "require": {
-        "php": "^8.5",
-        "illuminate/bus": "^13.0",
-        "illuminate/console": "^13.0",
-        "illuminate/contracts": "^13.0",
-        "illuminate/database": "^13.0",
-        "illuminate/queue": "^13.0",
-        "illuminate/support": "^13.0",
-        "juststeveking/state-machine": "^1.0"
+        "php": "^8.3",
+        "illuminate/bus": "^12.0 || ^13.0",
+        "illuminate/console": "^12.0 || ^13.0",
+        "illuminate/contracts": "^12.0 || ^13.0",
+        "illuminate/database": "^12.0 || ^13.0",
+        "illuminate/queue": "^12.0 || ^13.0",
+        "illuminate/support": "^12.0 || ^13.0"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
-        "laravel/pint": "^1.0",
-        "orchestra/testbench": "^11.0",
+        "laravel/pint": "^1.20",
+        "orchestra/testbench": "^10.0 || ^11.0",
         "pestphp/pest": "^3.0 || ^4.0"
     },
     "autoload": {

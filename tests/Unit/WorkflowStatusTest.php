@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use JustSteveKing\StateMachine\Contracts\StateContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\StateContract;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 
 it('exposes its backing value through the StateContract', function (): void {

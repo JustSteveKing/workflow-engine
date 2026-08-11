@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\StateMachine\Transitions;
 
-use JustSteveKing\StateMachine\Contracts\StateContract;
-use JustSteveKing\StateMachine\Contracts\TransitionContract;
-use JustSteveKing\StateMachine\Events\DomainEvent;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\StateContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\TransitionContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Events\DomainEvent;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 use JustSteveKing\WorkflowEngine\StateMachine\WorkflowStatusChanged;
 
 /**
  * Park an instance while it waits for an external signal.
+ *
+ * @internal
  */
 final class Await implements TransitionContract
 {

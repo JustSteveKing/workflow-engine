@@ -10,12 +10,24 @@ permissions:
 
 jobs:
   tests:
-    name: Tests · PHP ${{ matrix.php }}
+    name: Tests · PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }} ${{ matrix.dependencies == 'lowest' && '(lowest)' || '' }}
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        php: ['8.5']
+        php: ['8.3', '8.4', '8.5']
+        laravel: [12, 13]
+        dependencies: ['highest']
+        include:
+          - laravel: 12
+            testbench: 10
+          - laravel: 13
+            testbench: 11
+          # Verify the floor: lowest allowed dependencies on the lowest PHP.
+          - php: '8.3'
+            laravel: 12
+            testbench: 10
+            dependencies: 'lowest'
 
     steps:
       - name: Checkout
@@ -28,15 +40,57 @@ jobs:
           extensions: mbstring, pdo, pdo_sqlite, sqlite3
           coverage: none
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Constrain to Laravel ${{ matrix.laravel }}
+        run: composer require "orchestra/testbench:^${{ matrix.testbench }}.0" --dev --no-interaction --no-update
+
+      - name: Install dependencies (highest)
+        if: matrix.dependencies == 'highest'
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Install dependencies (lowest)
+        if: matrix.dependencies == 'lowest'
+        run: composer update --prefer-lowest --prefer-dist --no-interaction --no-progress
 
       - name: Run tests
         run: composer test
 
-  static-analysis:
-    name: Static analysis
+  tests-postgres:
+    name: Tests · PostgreSQL · PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.3'
+            laravel: 12
+            testbench: 10
+          - php: '8.4'
+            laravel: 13
+            testbench: 11
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: workflow_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,11 +98,46 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo, pdo_pgsql, pgsql
           coverage: none
 
+      - name: Constrain to Laravel ${{ matrix.laravel }}
+        run: composer require "orchestra/testbench:^${{ matrix.testbench }}.0" --dev --no-interaction --no-update
+
       - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: composer test
+
+  static-analysis:
+    name: Static analysis · Laravel ${{ matrix.laravel }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - laravel: 12
+            testbench: 10
+          - laravel: 13
+            testbench: 11
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Constrain to Laravel ${{ matrix.laravel }}
+        run: composer require "orchestra/testbench:^${{ matrix.testbench }}.0" --dev --no-interaction --no-update
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
 
       - name: Run PHPStan
         run: composer stan
@@ -63,7 +152,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
+          php-version: '8.4'
           coverage: none
 
       - name: Install dependencies

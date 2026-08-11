@@ -8,7 +8,7 @@ use Closure;
 use JustSteveKing\WorkflowEngine\Domain\BufferedSignal;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowInstance;
 
-interface WorkflowRepositoryContract
+interface WorkflowRepository
 {
     /**
      * Run the given callback inside a database transaction and return its result.

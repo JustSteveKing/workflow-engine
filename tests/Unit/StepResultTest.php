@@ -8,10 +8,10 @@ use JustSteveKing\WorkflowEngine\Tests\Fixtures\GotoTargetStep;
 it('builds a complete result', function (): void {
     $result = StepResult::complete(['a' => 1]);
 
-    expect($result->isComplete())->toBeTrue()
+    expect($result->isCompleted())->toBeTrue()
         ->and($result->isAwaiting())->toBeFalse()
         ->and($result->isGoto())->toBeFalse()
-        ->and($result->isSleep())->toBeFalse()
+        ->and($result->isSleeping())->toBeFalse()
         ->and($result->isFailed())->toBeFalse()
         ->and($result->contextUpdates)->toBe(['a' => 1]);
 });
@@ -42,7 +42,7 @@ it('builds a goto result', function (): void {
 it('builds a sleep result', function (): void {
     $result = StepResult::sleep(60, ['d' => 4]);
 
-    expect($result->isSleep())->toBeTrue()
+    expect($result->isSleeping())->toBeTrue()
         ->and($result->sleepSeconds)->toBe(60)
         ->and($result->contextUpdates)->toBe(['d' => 4]);
 });

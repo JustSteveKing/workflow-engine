@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Console\Commands;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepositoryContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
 use JustSteveKing\WorkflowEngine\Models\WorkflowSignal;
 
 final class WorkflowShowCommand extends WorkflowCommand
@@ -13,7 +13,7 @@ final class WorkflowShowCommand extends WorkflowCommand
 
     protected $description = 'Inspect a workflow instance: status, cursor, context, and signal log.';
 
-    public function handle(WorkflowRepositoryContract $repository): int
+    public function handle(WorkflowRepository $repository): int
     {
         $id = $this->stringArgument('id');
         $instance = $repository->findById($id);
