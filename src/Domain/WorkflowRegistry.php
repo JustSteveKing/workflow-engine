@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace JustSteveKing\WorkflowEngine\Domain;
 
 use InvalidArgumentException;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 
 final class WorkflowRegistry
 {
-    /** @var array<string, class-string<WorkflowDefinitionContract>> */
+    /** @var array<string, class-string<WorkflowDefinition>> */
     private array $definitions = [];
 
     /**
      * Register a workflow definition.
      *
-     * @param  class-string<WorkflowDefinitionContract>  $definitionClass
+     * @param  class-string<WorkflowDefinition>  $definitionClass
      */
     public function register(string $definitionClass): void
     {
@@ -26,7 +26,7 @@ final class WorkflowRegistry
     /**
      * Get a workflow definition by name.
      *
-     * @return class-string<WorkflowDefinitionContract>
+     * @return class-string<WorkflowDefinition>
      */
     public function get(string $name): string
     {

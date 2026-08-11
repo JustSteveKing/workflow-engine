@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Domain;
 
-use JustSteveKing\StateMachine\Contracts\StateContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\StateContract;
 
 enum WorkflowStatus: string implements StateContract
 {

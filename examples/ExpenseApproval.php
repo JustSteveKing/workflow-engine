@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Examples;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
@@ -19,7 +19,7 @@ use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
  *
  *     [ SubmitExpense, RouteExpense, AutoApprove, AwaitManagerApproval, Finalise ]
  */
-final class ExpenseApprovalWorkflow implements WorkflowDefinitionContract
+final class ExpenseApprovalWorkflow implements WorkflowDefinition
 {
     public static function name(): string
     {
@@ -38,9 +38,9 @@ final class ExpenseApprovalWorkflow implements WorkflowDefinitionContract
     }
 }
 
-final class SubmitExpenseStep implements WorkflowStepContract
+final class SubmitExpenseStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         return StepResult::complete(['submitted_at' => now()->toIso8601String()]);
     }
@@ -56,9 +56,9 @@ final class SubmitExpenseStep implements WorkflowStepContract
     }
 }
 
-final class RouteExpenseStep implements WorkflowStepContract
+final class RouteExpenseStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         $amount = (int) $context->get('amount_in_cents', 0);
 
@@ -79,9 +79,9 @@ final class RouteExpenseStep implements WorkflowStepContract
     }
 }
 
-final class AutoApproveStep implements WorkflowStepContract
+final class AutoApproveStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         // Skip the manual-approval step and go straight to finalising.
         return StepResult::goto(FinaliseExpenseStep::class, ['approved_by' => 'auto']);
@@ -98,9 +98,9 @@ final class AutoApproveStep implements WorkflowStepContract
     }
 }
 
-final class AwaitManagerApprovalStep implements WorkflowStepContract
+final class AwaitManagerApprovalStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Notification::send($manager, new ExpenseNeedsApproval(...));
 
@@ -118,9 +118,9 @@ final class AwaitManagerApprovalStep implements WorkflowStepContract
     }
 }
 
-final class FinaliseExpenseStep implements WorkflowStepContract
+final class FinaliseExpenseStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         //   Ledger::record($context->all());
 

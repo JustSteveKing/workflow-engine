@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace JustSteveKing\WorkflowEngine\StateMachine;
 
 use InvalidArgumentException;
-use JustSteveKing\StateMachine\Contracts\StateContract;
-use JustSteveKing\StateMachine\Contracts\StateMachineContract;
-use JustSteveKing\StateMachine\Contracts\TransitionContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\StateContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\StateMachineContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\TransitionContract;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 use JustSteveKing\WorkflowEngine\StateMachine\Transitions\Await;
 use JustSteveKing\WorkflowEngine\StateMachine\Transitions\Compensate;
@@ -19,6 +19,8 @@ use JustSteveKing\WorkflowEngine\StateMachine\Transitions\Sleep;
 /**
  * Adapts a WorkflowStatus to the state-machine package: exposes the current
  * state and the full table of legal status transitions for an instance.
+ *
+ * @internal
  */
 final class WorkflowStateMachine implements StateMachineContract
 {

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
-final class CountingAwaitTestStep implements WorkflowStepContract
+final class CountingAwaitTestStep implements WorkflowStep
 {
     private static int $executionCount = 0;
 
@@ -22,7 +22,7 @@ final class CountingAwaitTestStep implements WorkflowStepContract
         return self::$executionCount;
     }
 
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         self::$executionCount++;
 

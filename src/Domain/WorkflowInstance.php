@@ -6,10 +6,17 @@ namespace JustSteveKing\WorkflowEngine\Domain;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
-use JustSteveKing\StateMachine\StateMachine;
+use JustSteveKing\WorkflowEngine\StateMachine\StateMachine;
 use JustSteveKing\WorkflowEngine\Models\WorkflowInstance as EloquentWorkflowInstance;
 use JustSteveKing\WorkflowEngine\StateMachine\WorkflowStateMachine;
 
+/**
+ * The in-memory state of one workflow run. Its properties are public to read,
+ * and they mirror the persisted columns one to one. Mutate them only through the
+ * transition methods on this class (advanceStep(), awaitSignal(), retry(), and so
+ * on), which validate the change against the state machine first. Do not write
+ * the properties from outside.
+ */
 final class WorkflowInstance
 {
     /**
@@ -24,17 +31,17 @@ final class WorkflowInstance
         public readonly array $stepSequence,
         public readonly string $aggregateId,
         public readonly string $aggregateType,
-        public private(set) WorkflowStatus $status,
-        public private(set) int $stepIndex,
-        public private(set) int $attempts,
-        public private(set) array $completedSteps,
-        public private(set) ?string $awaitingSignal,
-        public private(set) ?CarbonInterface $wakeAt,
-        public private(set) WorkflowContext $context,
-        public private(set) ?string $failedReason,
-        public private(set) ?CarbonInterface $startedAt,
-        public private(set) ?CarbonInterface $completedAt,
-        public private(set) ?CarbonInterface $failedAt,
+        public WorkflowStatus $status,
+        public int $stepIndex,
+        public int $attempts,
+        public array $completedSteps,
+        public ?string $awaitingSignal,
+        public ?CarbonInterface $wakeAt,
+        public WorkflowContext $context,
+        public ?string $failedReason,
+        public ?CarbonInterface $startedAt,
+        public ?CarbonInterface $completedAt,
+        public ?CarbonInterface $failedAt,
     ) {}
 
     /**
@@ -302,7 +309,7 @@ final class WorkflowInstance
     /**
      * Re-arm a failed instance so its current step can be retried.
      */
-    public function reopen(): void
+    public function retry(): void
     {
         $this->transitionTo(WorkflowStatus::InProgress);
         $this->attempts = 0;
@@ -313,7 +320,7 @@ final class WorkflowInstance
 
     /**
      * Validate a status change through the state machine, then apply it. Throws
-     * JustSteveKing\StateMachine\Exceptions\InvalidTransitionException if the
+     * JustSteveKing\WorkflowEngine\StateMachine\Exceptions\InvalidTransitionException if the
      * move is not legal from the current status.
      */
     private function transitionTo(WorkflowStatus $target): void

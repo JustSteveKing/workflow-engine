@@ -26,7 +26,7 @@ return [
     | When a step fails and has retry budget remaining (see maxAttempts()), the
     | retry is delayed. The delay grows exponentially with the attempt number,
     | starting from "backoff" seconds and capped at "max_backoff" seconds. A
-    | step may override this by implementing HasRetryBackoff. Set "backoff" to 0
+    | step may override this by implementing CustomRetryBackoff. Set "backoff" to 0
     | for immediate retries.
     |
     */

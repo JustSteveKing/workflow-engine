@@ -8,8 +8,8 @@ one, fill in the real work, register it, and start it.
 | Example | Shows off |
 |---|---|
 | [`MemberRegistration.php`](MemberRegistration.php) | Awaiting signals, per-step timeouts, context threaded across steps, and per-step `maxAttempts` decisions (charge once, provision three times). |
-| [`OrderFulfilment.php`](OrderFulfilment.php) | Saga compensation with `CompensatingStep` (refund + release stock in reverse), plus a step-defined retry backoff with `HasRetryBackoff`. |
-| [`ExpenseApproval.php`](ExpenseApproval.php) | Branching with `goto` — small expenses auto-approve, large ones wait for a human — and the ordering wrinkle that comes with it. |
+| [`OrderFulfilment.php`](OrderFulfilment.php) | Saga compensation with `CompensatingStep` (refund + release stock in reverse), plus a step-defined retry backoff with `CustomRetryBackoff`. |
+| [`ExpenseApproval.php`](ExpenseApproval.php) | Branching with `goto` (small expenses auto-approve, large ones wait for a human), and the ordering wrinkle that comes with it. |
 | [`AbandonedCartReminder.php`](AbandonedCartReminder.php) | A time-spaced drip campaign built on `sleep()`, where a multi-day sequence costs one database row while it waits. |
 
 ## Wiring one up
@@ -38,8 +38,8 @@ app(WorkflowEngine::class)->start(
 
 Then make sure a queue worker is running (`php artisan queue:work`) so the
 engine's jobs advance the instance, and deliver signals when the outside world
-calls back — see [Delivering signals from webhooks](../README.md#delivering-signals-from-webhooks)
-in the main README.
+calls back. See [Delivering signals from webhooks](../docs/signals.md#delivering-signals-from-webhooks)
+in the docs.
 
 ## Poking at a running instance
 

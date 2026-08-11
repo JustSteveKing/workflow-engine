@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 use RuntimeException;
 
-final class ThrowingTestStep implements WorkflowStepContract
+final class ThrowingTestStep implements WorkflowStep
 {
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         throw new RuntimeException('step blew up');
     }

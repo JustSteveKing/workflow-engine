@@ -7,12 +7,12 @@ namespace JustSteveKing\WorkflowEngine\Contracts;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
-interface WorkflowStepContract
+interface WorkflowStep
 {
     /**
-     * Execute the step and return its result.
+     * Handle the step and return its result.
      */
-    public function execute(WorkflowContext $context): StepResult;
+    public function handle(WorkflowContext $context): StepResult;
 
     /**
      * Return the number of seconds this step can run before timing out.

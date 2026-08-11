@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace JustSteveKing\WorkflowEngine\Console\Commands;
 
 use JustSteveKing\WorkflowEngine\Contracts\VersionedWorkflowDefinition;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
 
 final class WorkflowListCommand extends WorkflowCommand
@@ -30,7 +30,7 @@ final class WorkflowListCommand extends WorkflowCommand
             $class = $registry->get($name);
             $definition = $this->laravel->make($class);
 
-            $steps = $definition instanceof WorkflowDefinitionContract ? count($definition->steps()) : 0;
+            $steps = $definition instanceof WorkflowDefinition ? count($definition->steps()) : 0;
             $version = $definition instanceof VersionedWorkflowDefinition ? $definition->version() : 1;
 
             $rows[] = [$name, $class, $version, $steps];

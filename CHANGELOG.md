@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-11
+
+This release contains breaking public API changes. See [UPGRADE.md](UPGRADE.md) for the
+step-by-step migration.
+
+### Added
+
+- A `docs/` documentation set, one topic per page, split out of the README.
+- Architecture decision records under `docs/adr/`.
+- A `StepOutcome` enum backing `StepResult`, replacing the string outcome.
+- A row-lock contention test and a PostgreSQL CI job that verify the concurrency guarantees against a driver with real row locking, rather than only SQLite.
+
+### Changed
+
+- **Breaking.** Dropped the `Contract` suffix from the core contracts: `WorkflowStepContract` is now `WorkflowStep`, `WorkflowDefinitionContract` is now `WorkflowDefinition`, `WorkflowRepositoryContract` is now `WorkflowRepository`.
+- **Breaking.** Renamed the capability interface `HasRetryBackoff` to `CustomRetryBackoff`.
+- **Breaking.** Renamed the step method `execute()` to `handle()` on `WorkflowStep`.
+- **Breaking.** `StepResult::$outcome` is now a `StepOutcome` enum rather than a string, and the predicates `isComplete()` and `isSleep()` are now `isCompleted()` and `isSleeping()`.
+- **Breaking.** Renamed `WorkflowInstance::reopen()` to `retry()`.
+- Widened the requirements to PHP `^8.3` and Laravel 12 or 13 (previously PHP `^8.5` and Laravel 13 only).
+- Inlined the state machine into `JustSteveKing\WorkflowEngine\StateMachine`, so illegal transitions now throw `JustSteveKing\WorkflowEngine\StateMachine\Exceptions\InvalidTransitionException`.
+- Marked the inlined state machine under `src/StateMachine` as `@internal`. It is package implementation, not a public extension point.
+
+### Removed
+
+- The `juststeveking/state-machine` dependency, now inlined. Anyone referencing its classes directly must move to the `JustSteveKing\WorkflowEngine\StateMachine` namespace.
+
 ## [0.2.0] - 2026-07-24
 
 ### Changed
@@ -31,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Console commands: `workflow:list`, `workflow:show`, `workflow:instances`, `workflow:start`, `workflow:signal`, `workflow:advance`, `workflow:retry`, `workflow:tick`, `workflow:prune`.
 - Publishable config (`workflow-engine`) for queue connection/name, retry backoff, and early-signal buffering.
 
-[Unreleased]: https://github.com/juststeveking/workflow-engine/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/juststeveking/workflow-engine/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/juststeveking/workflow-engine/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/juststeveking/workflow-engine/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/juststeveking/workflow-engine/releases/tag/v0.1.0

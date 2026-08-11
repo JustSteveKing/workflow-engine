@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
 
 use JustSteveKing\WorkflowEngine\Contracts\VersionedWorkflowDefinition;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 
 /**
  * A definition whose step list can change at runtime, to prove instances run
  * against the sequence snapshotted at start rather than the live definition.
  */
-final class MutableWorkflowDefinition implements VersionedWorkflowDefinition, WorkflowDefinitionContract
+final class MutableWorkflowDefinition implements VersionedWorkflowDefinition, WorkflowDefinition
 {
     public static bool $includeSecondStep = false;
 

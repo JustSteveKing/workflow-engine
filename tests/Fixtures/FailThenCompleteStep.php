@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowStepContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
 use JustSteveKing\WorkflowEngine\Domain\StepResult;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowContext;
 
-final class FailThenCompleteStep implements WorkflowStepContract
+final class FailThenCompleteStep implements WorkflowStep
 {
     public static int $executions = 0;
 
@@ -17,7 +17,7 @@ final class FailThenCompleteStep implements WorkflowStepContract
         self::$executions = 0;
     }
 
-    public function execute(WorkflowContext $context): StepResult
+    public function handle(WorkflowContext $context): StepResult
     {
         self::$executions++;
 

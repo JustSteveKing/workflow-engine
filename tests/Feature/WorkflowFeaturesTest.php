@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowEngine;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
+use JustSteveKing\WorkflowEngine\Events\StepCompensationFailed;
+use JustSteveKing\WorkflowEngine\Events\WorkflowFailed;
 use JustSteveKing\WorkflowEngine\Jobs\AdvanceWorkflow;
 use JustSteveKing\WorkflowEngine\Jobs\CompensateWorkflow;
 use JustSteveKing\WorkflowEngine\Models\WorkflowInstance;
@@ -152,10 +155,10 @@ it('resumes a failed workflow when retried', function (): void {
 
     engine()->retry($instance->id);
 
-    $reopened = WorkflowInstance::query()->findOrFail($instance->id);
-    expect($reopened->status)->toBe('in_progress')
-        ->and($reopened->failed_reason)->toBeNull()
-        ->and($reopened->failed_at)->toBeNull();
+    $retried = WorkflowInstance::query()->findOrFail($instance->id);
+    expect($retried->status)->toBe('in_progress')
+        ->and($retried->failed_reason)->toBeNull()
+        ->and($retried->failed_at)->toBeNull();
 
     engine()->advance($instance->id); // step succeeds this time
     engine()->advance($instance->id); // complete
@@ -349,15 +352,32 @@ it('discards buffered signals when an instance terminates', function (): void {
         ->and($buffered->refresh()->consumed_at)->not->toBeNull();
 });
 
-it('protects instance state from external mutation', function (): void {
+it('ignores a stale compensate on an instance that is not compensating', function (): void {
     Queue::fake();
-    register(AutoWorkflowDefinition::class);
+    CompensatingChargeStep::reset();
+    register(SagaWorkflowDefinition::class);
 
     $instance = engine()->start(
-        workflowName: AutoWorkflowDefinition::name(),
-        aggregateId: 'member_enc',
-        aggregateType: 'member',
+        workflowName: SagaWorkflowDefinition::name(),
+        aggregateId: 'invoice_stale_compensate',
+        aggregateType: 'invoice',
     );
 
-    expect(fn() => $instance->stepIndex = 99)->toThrow(Error::class);
+    engine()->advance($instance->id); // charge step completes; it is a compensatable, completed step
+
+    $running = WorkflowInstance::query()->findOrFail($instance->id);
+    expect($running->status)->toBe('in_progress'); // not compensating
+
+    Event::fake();
+
+    // A stale CompensateWorkflow job for an instance that is not compensating.
+    engine()->compensate($instance->id);
+
+    // The guard holds: nothing was compensated, the status is untouched, and no
+    // terminal failure was recorded.
+    expect(CompensatingChargeStep::$compensated)->toBe(0)
+        ->and(WorkflowInstance::query()->findOrFail($instance->id)->status)->toBe('in_progress');
+
+    Event::assertNotDispatched(WorkflowFailed::class);
+    Event::assertNotDispatched(StepCompensationFailed::class);
 });

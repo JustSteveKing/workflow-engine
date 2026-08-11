@@ -3,15 +3,15 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Queue;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepositoryContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowEngine;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
 use JustSteveKing\WorkflowEngine\Models\WorkflowSignal;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\AwaitWorkflowDefinition;
 
-function repository(): WorkflowRepositoryContract
+function repository(): WorkflowRepository
 {
-    return app(WorkflowRepositoryContract::class);
+    return app(WorkflowRepository::class);
 }
 
 it('finds instances awaiting a signal, filtered by aggregate and type', function (): void {

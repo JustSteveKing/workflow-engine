@@ -20,12 +20,12 @@ domain events report every transition. Two tables: `workflow_instances`,
 composer install
 ```
 
-Requires PHP `^8.5`, the Laravel 13 `illuminate/*` components (bus, console,
-contracts, database, queue, support — not the full `laravel/framework`), and
-`juststeveking/state-machine`, plus a
-database with transactions + row locking (tests use Testbench with in-memory
-SQLite; no external services). It's a package, exercised through
-`orchestra/testbench`.
+Requires PHP `^8.3` and the Laravel 12 or 13 `illuminate/*` components (bus,
+console, contracts, database, queue, support, not the full `laravel/framework`),
+plus a database with transactions + row locking (tests use Testbench with
+in-memory SQLite; no external services). It's a package, exercised through
+`orchestra/testbench`. The state machine is inlined under `src/StateMachine`
+with no external dependency.
 
 ## Verify — run all three before declaring done
 
@@ -48,8 +48,8 @@ behaviour.
 config/
   workflow-engine.php   queue connection/name, retry backoff, early-signal buffering
 src/
-  Contracts/            WorkflowDefinitionContract, WorkflowStepContract, WorkflowRepositoryContract,
-                        CompensatingStep, HasRetryBackoff, VersionedWorkflowDefinition (last three optional)
+  Contracts/            WorkflowDefinition, WorkflowStep, WorkflowRepository,
+                        CompensatingStep, CustomRetryBackoff, VersionedWorkflowDefinition (last three optional)
   Domain/               WorkflowEngine (orchestrator), WorkflowInstance (in-memory state, encapsulated),
                         WorkflowContext (immutable data), StepResult, WorkflowRegistry, WorkflowStatus (enum + StateContract)
   StateMachine/         WorkflowStateMachine (StateMachineContract adapter), WorkflowStatusChanged (DomainEvent),
@@ -58,7 +58,7 @@ src/
                         StepTimedOut, WorkflowSlept, WorkflowCompleted, WorkflowCompensating, StepCompensationFailed,
                         WorkflowFailed, WorkflowRetried
   Models/               Eloquent WorkflowInstance, WorkflowSignal
-  Repositories/         EloquentWorkflowRepository (default WorkflowRepositoryContract binding)
+  Repositories/         EloquentWorkflowRepository (default WorkflowRepository binding)
   Jobs/                 AdvanceWorkflow, TimeoutWorkflowStep, CompensateWorkflow
   Console/Commands/     WorkflowCommand (base, typed input helpers) + list/show/instances/start/
                         signal/advance/retry/tick/prune commands
@@ -78,11 +78,11 @@ tests/Fixtures/         step + definition test doubles
 - Classes `final`; value objects and the engine `readonly`.
 - Constructor property promotion; named arguments at call sites; explicit return
   types including `: void`.
-- Existing code uses Yoda comparisons (`null === $x`, `'complete' === $x`) — match it.
-- `Domain\WorkflowInstance` uses PHP 8.4 **asymmetric visibility**
-  (`public private(set)`): state is readable outside, mutable only via the
-  instance's own transition methods. Do not add public setters or make mutation
-  props writable.
+- Existing code uses Yoda comparisons (`null === $x`, `StepOutcome::Completed === $x`) — match it.
+- `Domain\WorkflowInstance` exposes its state as plain `public` properties, but
+  mutation goes only through the instance's own transition methods
+  (`advanceStep()`, `awaitSignal()`, `retry()`, and so on) by convention. Do not
+  add public setters or write these properties from outside the class.
 - Production deps stay limited to `illuminate/*`. Let Pint format — run `composer lint`.
 
 ## Core invariants — do not regress these
@@ -91,7 +91,8 @@ tests/Fixtures/         step + definition test doubles
    → …`, terminal `completed`/`failed`; `compensating` precedes `failed` for sagas;
    `retry()` moves `failed → in_progress`. Every status change in
    `WorkflowInstance` goes through `transitionTo()`, which validates against
-   `juststeveking/state-machine` and throws `InvalidTransitionException` on an
+   the inlined state machine in `src/StateMachine` and throws
+   `InvalidTransitionException` on an
    illegal move. When you add a status or a new transition, update the matching
    `TransitionContract` in `src/StateMachine/Transitions` (and `transitionFor()`)
    or legal flows will throw. Enum `Domain\WorkflowStatus` is the `StateContract`;
@@ -106,9 +107,9 @@ tests/Fixtures/         step + definition test doubles
 5. **Timeout step identity.** `TimeoutWorkflowStep` carries the `stepIndex` it
    guards; `timeout()` no-ops unless still `awaiting` that exact index.
 6. **`maxAttempts()` = total attempts** (1 = no retry). Retries are delayed by
-   `HasRetryBackoff` or the config exponential backoff. `attempts` is persisted,
+   `CustomRetryBackoff` or the config exponential backoff. `attempts` is persisted,
    reset on advance/goto/await.
-7. **Exceptions from `execute()` are failures** — caught and routed through the
+7. **Exceptions from `handle()` are failures** — caught and routed through the
    retry/compensation path. Keep the `try/catch`.
 8. **Definition snapshot.** `start()` stores the ordered step list
    (`step_sequence`) and `definition_version` on the instance; the engine drives
@@ -135,11 +136,11 @@ tests/Fixtures/         step + definition test doubles
 
 ## Common tasks
 
-**Add a step (in a consuming app):** implement `WorkflowStepContract`. Return
+**Add a step (in a consuming app):** implement `WorkflowStep`. Return
 `complete`/`await`/`goto`/`sleep`/`fail`. Optionally add `CompensatingStep` and/or
-`HasRetryBackoff`. Steps resolve from the container (constructor DI works).
+`CustomRetryBackoff`. Steps resolve from the container (constructor DI works).
 
-**Add a definition:** implement `WorkflowDefinitionContract` (`name()`, `steps()`);
+**Add a definition:** implement `WorkflowDefinition` (`name()`, `steps()`);
 optionally `VersionedWorkflowDefinition`. Register via `WorkflowRegistry::register()`.
 
 **Add a `StepResult` outcome:** add the factory + `isX()` on `StepResult`, then a
@@ -202,5 +203,5 @@ methods) → `EloquentWorkflowRepository` (`create()`/`save()`) →
 
 - Don't commit, push, or open PRs unless explicitly asked.
 - Don't add CI, tooling, or dependencies beyond what the task needs.
-- Persistence stays behind `WorkflowRepositoryContract`; the engine never touches
+- Persistence stays behind `WorkflowRepository`; the engine never touches
   Eloquent or the DB directly.

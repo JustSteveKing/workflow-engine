@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Tests\Fixtures;
 
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinitionContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 
-final class TwoStepAwaitTimeoutWorkflowDefinition implements WorkflowDefinitionContract
+final class TwoStepAwaitTimeoutWorkflowDefinition implements WorkflowDefinition
 {
     public static function name(): string
     {

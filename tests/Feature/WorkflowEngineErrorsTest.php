@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowEngine;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
+use JustSteveKing\WorkflowEngine\Events\StepCompleted;
 use JustSteveKing\WorkflowEngine\Exceptions\InvalidSignalException;
 use JustSteveKing\WorkflowEngine\Exceptions\WorkflowNotFoundException;
+use JustSteveKing\WorkflowEngine\Models\WorkflowInstance;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\AutoWorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\AwaitWorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\BadGotoWorkflowDefinition;
@@ -26,11 +29,11 @@ it('throws when the target instance is unknown', function (string $method): void
     $engine = errorEngine();
 
     $call = match ($method) {
-        'advance' => fn() => $engine->advance('missing'),
-        'signal' => fn() => $engine->signal('missing', 'x'),
-        'timeout' => fn() => $engine->timeout('missing', 0),
-        'retry' => fn() => $engine->retry('missing'),
-        'compensate' => fn() => $engine->compensate('missing'),
+        'advance' => fn() => $engine->advance('999999'),
+        'signal' => fn() => $engine->signal('999999', 'x'),
+        'timeout' => fn() => $engine->timeout('999999', 0),
+        'retry' => fn() => $engine->retry('999999'),
+        'compensate' => fn() => $engine->compensate('999999'),
     };
 
     expect($call)->toThrow(WorkflowNotFoundException::class);
@@ -92,4 +95,28 @@ it('throws when a step routes to a goto target outside the sequence', function (
 
     expect(fn() => $engine->advance($instance->id))
         ->toThrow(RuntimeException::class);
+});
+
+it('rolls back and dispatches nothing when a step fails inside the transaction', function (): void {
+    $engine = errorEngine(BadGotoWorkflowDefinition::class);
+
+    $instance = $engine->start(BadGotoWorkflowDefinition::name(), 'agg_rollback', 'thing');
+
+    // Fake after start() so we measure only what advance() dispatches.
+    Queue::fake();
+    Event::fake();
+
+    // The bad goto throws inside the transaction, which rolls it back before the
+    // deferred side effects are run.
+    expect(fn() => $engine->advance($instance->id))
+        ->toThrow(RuntimeException::class);
+
+    // Nothing escaped the rolled-back transaction: no follow-on job, no event.
+    Queue::assertNothingPushed();
+    Event::assertNotDispatched(StepCompleted::class);
+
+    // And no partial state was persisted.
+    $reloaded = WorkflowInstance::query()->findOrFail($instance->id);
+    expect($reloaded->status)->toBe('pending')
+        ->and($reloaded->step_index)->toBe(0);
 });

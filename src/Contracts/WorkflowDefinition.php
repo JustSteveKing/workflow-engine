@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Contracts;
 
-interface WorkflowDefinitionContract
+interface WorkflowDefinition
 {
     /**
      * Return the machine-name of this workflow.
@@ -14,7 +14,7 @@ interface WorkflowDefinitionContract
     /**
      * Return an ordered array of step class names.
      *
-     * @return class-string<WorkflowStepContract>[]
+     * @return class-string<WorkflowStep>[]
      */
     public function steps(): array;
 }

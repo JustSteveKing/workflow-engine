@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\StateMachine\Transitions;
 
-use JustSteveKing\StateMachine\Contracts\StateContract;
-use JustSteveKing\StateMachine\Contracts\TransitionContract;
-use JustSteveKing\StateMachine\Events\DomainEvent;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\StateContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Contracts\TransitionContract;
+use JustSteveKing\WorkflowEngine\StateMachine\Events\DomainEvent;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 use JustSteveKing\WorkflowEngine\StateMachine\WorkflowStatusChanged;
 
 /**
  * Move an instance into active processing: starting, resuming a signal, waking
  * from sleep, or retrying a failed instance.
+ *
+ * @internal
  */
 final class Proceed implements TransitionContract
 {

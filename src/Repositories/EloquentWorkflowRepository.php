@@ -7,14 +7,14 @@ namespace JustSteveKing\WorkflowEngine\Repositories;
 use Closure;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepositoryContract;
+use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
 use JustSteveKing\WorkflowEngine\Domain\BufferedSignal;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowInstance;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 use JustSteveKing\WorkflowEngine\Models\WorkflowInstance as EloquentWorkflowInstance;
 use JustSteveKing\WorkflowEngine\Models\WorkflowSignal;
 
-final class EloquentWorkflowRepository implements WorkflowRepositoryContract
+final class EloquentWorkflowRepository implements WorkflowRepository
 {
     /**
      * @template TReturn
