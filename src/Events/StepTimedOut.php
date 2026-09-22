@@ -10,5 +10,13 @@ final readonly class StepTimedOut
         public int|string $instanceId,
         public string $signal,
         public int $stepIndex,
+        /**
+         * The step the instance continued from, when the timed-out step routes
+         * its deadline somewhere (see TimeoutRoutingStep). Null when the
+         * timeout failed the instance, which remains the default.
+         *
+         * @var class-string|null
+         */
+        public ?string $reroutedTo = null,
     ) {}
 }

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `TimeoutRoutingStep`, an optional step interface that turns a timeout into a deadline rather than a failure. A step implementing it names another step in the sequence via `timeoutTo()`, and on expiry the instance continues from there through the same jump `goto` uses instead of failing. Without it, a timeout fails the instance as before.
+- `StepTimedOut` now carries `reroutedTo`, the step the instance continued from, or `null` when the timeout failed it. The parameter is optional, so existing listeners are unaffected.
+
+### Fixed
+
+- `timeoutTo()` is checked with `is_a()` before the step is resolved from the container, matching `hasCompensatableSteps()`. Resolving inside the timeout transaction meant a pinned step class removed by a later deploy threw out of the transaction and retried into the failed queue instead of failing the instance; it also kept a step's dependencies out of the row lock.
+- `WorkflowInstance::jumpToStep()` now clears `awaitingSignal`. It was only ever reached from `goto`, where nothing was pending, so the stale value never surfaced; a routed timeout jumps from a step that is still parked and would otherwise have carried its signal forward.
+
 ## [1.0.0] - 2026-08-11
 
 This release contains breaking public API changes. See [UPGRADE.md](UPGRADE.md) for the

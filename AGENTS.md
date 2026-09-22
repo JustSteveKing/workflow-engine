@@ -49,7 +49,8 @@ config/
   workflow-engine.php   queue connection/name, retry backoff, early-signal buffering
 src/
   Contracts/            WorkflowDefinition, WorkflowStep, WorkflowRepository,
-                        CompensatingStep, CustomRetryBackoff, VersionedWorkflowDefinition (last three optional)
+                        CompensatingStep, CustomRetryBackoff, TimeoutRoutingStep,
+                        VersionedWorkflowDefinition (last four optional)
   Domain/               WorkflowEngine (orchestrator), WorkflowInstance (in-memory state, encapsulated),
                         WorkflowContext (immutable data), StepResult, WorkflowRegistry, WorkflowStatus (enum + StateContract)
   StateMachine/         WorkflowStateMachine (StateMachineContract adapter), WorkflowStatusChanged (DomainEvent),
