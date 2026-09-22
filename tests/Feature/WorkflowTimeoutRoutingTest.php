@@ -15,6 +15,7 @@ use JustSteveKing\WorkflowEngine\Tests\Fixtures\AwaitWorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\BadTimeoutRouteWorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\SendReminderStep;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\TimeoutRoutingWorkflowDefinition;
+use JustSteveKing\WorkflowEngine\Tests\Fixtures\VanishedStepWorkflowDefinition;
 
 function startTimeoutRoutingInstance(): array
 {
@@ -160,4 +161,32 @@ it('ignores a stale timeout aimed at a step the instance has left', function ():
 
     expect($unaffected->status)->not->toBe('failed')
         ->and(WorkflowSignal::query()->where('signal', 'timeout')->count())->toBe(0);
+});
+
+it('fails cleanly when the timed-out step class no longer exists', function (): void {
+    Queue::fake();
+
+    app(WorkflowRegistry::class)->register(VanishedStepWorkflowDefinition::class);
+
+    $engine = app(WorkflowEngine::class);
+    $instance = $engine->start(
+        workflowName: VanishedStepWorkflowDefinition::name(),
+        aggregateId: 'invoice_vanished',
+        aggregateType: 'invoice',
+    );
+
+    $engine->advance($instance->id);
+
+    // The deploy that removed the step is simulated by rewriting the pinned
+    // sequence, which is exactly the state pinning is meant to survive.
+    WorkflowInstance::query()->whereKey($instance->id)->update([
+        'step_sequence' => ['App\\Gone\\RemovedStep', SendReminderStep::class],
+    ]);
+
+    $engine->timeout($instance->id, 0);
+
+    $failed = WorkflowInstance::query()->findOrFail($instance->id);
+
+    expect($failed->status)->toBe('failed')
+        ->and($failed->failed_reason)->toContain('timed out');
 });

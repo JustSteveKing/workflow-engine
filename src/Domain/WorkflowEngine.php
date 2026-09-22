@@ -536,6 +536,21 @@ final readonly class WorkflowEngine
      */
     private function timeoutRouteFor(string $stepClass): ?string
     {
+        /*
+         * Checked statically before resolving, as hasCompensatableSteps() does.
+         * A pinned step class can outlive the deploy that removed it — that is
+         * what pinning the sequence is for — and make() on a missing class
+         * would throw out of the surrounding transaction, turning a clean
+         * timeout failure into a rolled-back job that retries into the failed
+         * queue. is_a() answers false for it instead, and the timeout falls
+         * through to failing the instance with a reason. It also keeps the
+         * step's dependencies out of the row lock for every step that does not
+         * route its timeout.
+         */
+        if (! is_a($stepClass, TimeoutRoutingStep::class, true)) {
+            return null;
+        }
+
         $step = $this->container->make($stepClass);
 
         return $step instanceof TimeoutRoutingStep ? $step->timeoutTo() : null;
