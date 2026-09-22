@@ -21,7 +21,7 @@ use JustSteveKing\WorkflowEngine\Database\Factories\WorkflowSignalFactory;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-final class WorkflowSignal extends Model
+class WorkflowSignal extends Model
 {
     /** @use HasFactory<WorkflowSignalFactory> */
     use HasFactory;

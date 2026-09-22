@@ -32,8 +32,13 @@ use JustSteveKing\WorkflowEngine\Database\Factories\WorkflowInstanceFactory;
  * @property Carbon|null $failed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ *
+ * Not final: an application needs somewhere to hang the relations that connect
+ * an instance to its own aggregate — the member, the order, the subscription —
+ * and without that it ends up declaring a second model over the same table
+ * whose casts then drift from this one's.
  */
-final class WorkflowInstance extends Model
+class WorkflowInstance extends Model
 {
     /** @use HasFactory<WorkflowInstanceFactory> */
     use HasFactory;

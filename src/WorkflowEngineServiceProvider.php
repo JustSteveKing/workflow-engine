@@ -14,6 +14,7 @@ use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowCancelCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowInstancesCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowListCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowPruneCommand;
+use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowRecoverCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowRetryCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowShowCommand;
 use JustSteveKing\WorkflowEngine\Console\Commands\WorkflowSignalCommand;
@@ -72,6 +73,7 @@ final class WorkflowEngineServiceProvider extends ServiceProvider
                 WorkflowCancelCommand::class,
                 WorkflowRetryCommand::class,
                 WorkflowTickCommand::class,
+                WorkflowRecoverCommand::class,
                 WorkflowPruneCommand::class,
             ]);
         }

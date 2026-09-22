@@ -721,7 +721,7 @@ final readonly class WorkflowEngine
     private function dispatchAdvanceJob(int|string $instanceId, DateTimeInterface|int|null $delay = null): mixed
     {
         $job = new AdvanceWorkflow($instanceId);
-        $this->onWorkflowQueue($job);
+        $this->routeOntoWorkflowQueue($job);
 
         if ($delay instanceof DateTimeInterface || (is_int($delay) && $delay > 0)) {
             $job->delay($delay);
@@ -733,7 +733,7 @@ final readonly class WorkflowEngine
     private function dispatchTimeoutJob(int|string $instanceId, int $stepIndex, int $delaySeconds): mixed
     {
         $job = new TimeoutWorkflowStep($instanceId, $stepIndex);
-        $this->onWorkflowQueue($job);
+        $this->routeOntoWorkflowQueue($job);
         $job->delay(Carbon::now()->addSeconds($delaySeconds));
 
         return $this->bus->dispatch($job);
@@ -742,12 +742,18 @@ final readonly class WorkflowEngine
     private function dispatchCompensateJob(int|string $instanceId): mixed
     {
         $job = new CompensateWorkflow($instanceId);
-        $this->onWorkflowQueue($job);
+        $this->routeOntoWorkflowQueue($job);
 
         return $this->bus->dispatch($job);
     }
 
-    private function onWorkflowQueue(AdvanceWorkflow|CompensateWorkflow|TimeoutWorkflowStep $job): void
+    /**
+     * Put one of the engine's jobs on the connection and queue the engine
+     * uses. Public so a host dispatching them — a recovery sweep, a console
+     * command — routes them the same way rather than reimplementing it and
+     * drifting the first time a routing key is added.
+     */
+    public function routeOntoWorkflowQueue(AdvanceWorkflow|CompensateWorkflow|TimeoutWorkflowStep $job): void
     {
         $connection = $this->config->get('workflow-engine.queue.connection');
         $queue = $this->config->get('workflow-engine.queue.name');

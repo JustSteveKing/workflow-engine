@@ -59,3 +59,30 @@ With early signal buffering on, you can also deliver a `signal()` to an instance
 
 - [Concepts](concepts.md#the-aggregate), how the aggregate makes webhook delivery work.
 - [Timeouts and retries](timeouts-and-retries.md), bounding how long a step waits for its signal.
+
+## Naming the step a signal is for
+
+With buffering on, `signal()` refuses nothing short of a terminal instance:
+anything it is not currently awaiting is held in case a later step wants it.
+That is what rescues an early signal, and it also means a signal aimed at the
+wrong workflow, or at a decision already taken, is accepted and the caller is
+told it landed.
+
+Pass the step you expect to consume it and that gets checked instead:
+
+```php
+$engine->signal(
+    instanceId: $instance->id,
+    signal: 'approved',
+    signalData: ['approved_by' => $user->id],
+    consumingStep: AwaitApproval::class,
+);
+```
+
+The step must be in this instance's pinned sequence and still at or ahead of
+the cursor, and nothing of that name may already be buffered — only the oldest
+is ever applied, so a second signal for one await cannot land, and where the
+two carry opposite verdicts, silently keeping the first is worse than refusing
+the second. Any of those raises `InvalidSignalException`.
+
+Leaving it out keeps the old behaviour exactly.
