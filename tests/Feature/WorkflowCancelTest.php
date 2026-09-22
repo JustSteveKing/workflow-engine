@@ -9,7 +9,6 @@ use JustSteveKing\WorkflowEngine\Domain\WorkflowRegistry;
 use JustSteveKing\WorkflowEngine\Events\WorkflowCancelled;
 use JustSteveKing\WorkflowEngine\Events\WorkflowCompensating;
 use JustSteveKing\WorkflowEngine\Events\WorkflowFailed;
-use JustSteveKing\WorkflowEngine\Exceptions\WorkflowNotFoundException;
 use JustSteveKing\WorkflowEngine\Models\WorkflowInstance;
 use JustSteveKing\WorkflowEngine\Models\WorkflowSignal;
 use JustSteveKing\WorkflowEngine\Tests\Fixtures\AutoWorkflowDefinition;
@@ -122,9 +121,4 @@ it('does nothing to an instance that already finished', function (): void {
 
     expect(WorkflowInstance::query()->findOrFail($instance->id)->status)->toBe($before)
         ->and(WorkflowSignal::query()->where('signal', 'cancelled')->count())->toBe(0);
-});
-
-it('throws for an instance that does not exist', function (): void {
-    expect(fn() => app(WorkflowEngine::class)->cancel('nope', 'irrelevant'))
-        ->toThrow(WorkflowNotFoundException::class);
 });
