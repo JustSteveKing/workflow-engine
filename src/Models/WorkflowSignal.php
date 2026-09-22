@@ -44,7 +44,16 @@ class WorkflowSignal extends Model
         );
     }
 
-    /** @return Factory<self> */
+    /**
+     * Factory<self> would seal this model against being extended: Factory's
+     * model type is invariant, so a subclass returning a factory for itself is
+     * not a compatible override and a host that extends the model cannot give
+     * it one. Declaring the variance at the use site keeps that open — the
+     * subclass's own factory satisfies it — without loosening what callers of
+     * this method can rely on.
+     *
+     * @return Factory<covariant self>
+     */
     protected static function newFactory(): Factory
     {
         return WorkflowSignalFactory::new();
