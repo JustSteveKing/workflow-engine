@@ -13,6 +13,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use JustSteveKing\WorkflowEngine\Contracts\CompensatingStep;
+use JustSteveKing\WorkflowEngine\Contracts\ContextualTimeout;
 use JustSteveKing\WorkflowEngine\Contracts\CustomRetryBackoff;
 use JustSteveKing\WorkflowEngine\Contracts\VersionedWorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Contracts\TimeoutRoutingStep;
@@ -203,7 +204,7 @@ final readonly class WorkflowEngine
                 $this->repository->save($instance);
                 $this->defer($deferred, fn() => $this->events->dispatch(new WorkflowAwaitingSignal($instance->id, $signal)));
 
-                $timeout = $step->timeoutSeconds();
+                $timeout = $this->timeoutSecondsFor($step, $instance->context);
                 if (null !== $timeout) {
                     $stepIndex = $instance->stepIndex;
                     $this->defer($deferred, fn() => $this->dispatchTimeoutJob($instance->id, $stepIndex, $timeout));
@@ -526,6 +527,20 @@ final readonly class WorkflowEngine
         $this->defer($deferred, fn() => $this->events->dispatch(new WorkflowFailed($instance->id, $reason)));
 
         return $deferred;
+    }
+
+    /**
+     * How long this step waits before timing out, for the instance in front of
+     * it. A deadline already past is clamped to zero so the timeout fires on
+     * the next pass rather than being scheduled into history.
+     */
+    private function timeoutSecondsFor(WorkflowStep $step, WorkflowContext $context): ?int
+    {
+        $seconds = $step instanceof ContextualTimeout
+            ? $step->timeoutSecondsFor($context)
+            : $step->timeoutSeconds();
+
+        return null === $seconds ? null : max(0, $seconds);
     }
 
     /**

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ContextualTimeout`, an optional step interface whose `timeoutSecondsFor(WorkflowContext $context)` is asked for the instance in front of it. `timeoutSeconds()` takes no arguments, so it can express "an hour after this step parks" but not "three days after the date this particular order was promised" — the shape most real deadlines have. It is checked before `timeoutSeconds()`, which is unchanged for every step that does not implement it, and a deadline already past is clamped to zero rather than scheduled into the past.
+
+### Added
+
 - `TimeoutRoutingStep`, an optional step interface that turns a timeout into a deadline rather than a failure. A step implementing it names another step in the sequence via `timeoutTo()`, and on expiry the instance continues from there through the same jump `goto` uses instead of failing. Without it, a timeout fails the instance as before.
 - `StepTimedOut` now carries `reroutedTo`, the step the instance continued from, or `null` when the timeout failed it. The parameter is optional, so existing listeners are unaffected.
 
