@@ -10,6 +10,53 @@ The tagging matters more than it sounds. Without it, a timeout scheduled an hour
 
 Return `null` to wait indefinitely.
 
+## Deadlines that are not failures
+
+Failing is the right answer when the signal was supposed to arrive. It is the
+wrong answer when the silence is the point — an invoice waiting on payment,
+where fifteen days of nothing should send a reminder and keep waiting, not kill
+the renewal.
+
+A step implementing `TimeoutRoutingStep` names where to continue instead:
+
+```php
+final class AwaitPayment implements WorkflowStep, TimeoutRoutingStep
+{
+    public function handle(WorkflowContext $context): StepResult
+    {
+        return StepResult::await('payment_received');
+    }
+
+    public function timeoutTo(): string
+    {
+        return SendFirstReminder::class;
+    }
+
+    public function timeoutSeconds(): ?int
+    {
+        return 15 * 24 * 60 * 60;
+    }
+
+    public function maxAttempts(): int
+    {
+        return 1;
+    }
+}
+```
+
+On expiry the instance jumps to that step through the same mechanism `goto`
+uses, so the step it lands on runs exactly as it would on any other entry. The
+timeout is still written to the signal log, and `StepTimedOut` still fires —
+with `reroutedTo` set to the step continued from, so a listener can tell a
+deadline from a death.
+
+The timed-out step is marked completed before the jump, so compensation still
+covers it if the workflow later rolls back. The routed step must appear in the
+instance's pinned sequence; if it does not, the instance fails with a reason
+saying so rather than parking on a signal that is never coming.
+
+Without this interface a timeout fails the instance, which remains the default.
+
 ## Retries and backoff
 
 `maxAttempts()` is the total number of attempts for a step before it fails, not the number of retries on top of the first run:

@@ -221,6 +221,10 @@ final class WorkflowInstance
         $this->stepIndex = $stepIndex;
         $this->attempts = 0;
         $this->wakeAt = null;
+        // A jump leaves the wait behind: goto arrives here from a completed
+        // step with nothing pending, but a routed timeout arrives from a step
+        // that was still parked, and must not carry its signal forward.
+        $this->awaitingSignal = null;
     }
 
     /**

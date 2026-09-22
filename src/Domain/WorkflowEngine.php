@@ -15,6 +15,7 @@ use InvalidArgumentException;
 use JustSteveKing\WorkflowEngine\Contracts\CompensatingStep;
 use JustSteveKing\WorkflowEngine\Contracts\CustomRetryBackoff;
 use JustSteveKing\WorkflowEngine\Contracts\VersionedWorkflowDefinition;
+use JustSteveKing\WorkflowEngine\Contracts\TimeoutRoutingStep;
 use JustSteveKing\WorkflowEngine\Contracts\WorkflowDefinition;
 use JustSteveKing\WorkflowEngine\Contracts\WorkflowRepository;
 use JustSteveKing\WorkflowEngine\Contracts\WorkflowStep;
@@ -295,6 +296,33 @@ final readonly class WorkflowEngine
                 consumed: true,
             );
 
+            /*
+             * A step may treat its timeout as a deadline rather than a failure
+             * and name where to continue from. The jump is the one goto uses,
+             * so the step it lands on runs as it would on any other entry.
+             */
+            $stepClass = $instance->currentStepClass();
+            $route = null === $stepClass ? null : $this->timeoutRouteFor($stepClass);
+
+            if (null !== $route) {
+                $targetIndex = $instance->indexOfStep($route);
+
+                if (null === $targetIndex) {
+                    $reason = "Step '{$stepClass}' timed out and routes to '{$route}', which is not part of the workflow's step sequence.";
+                    $this->defer($deferred, fn() => $this->events->dispatch(new StepTimedOut($instance->id, $awaitingSignal, $stepIndex)));
+
+                    return $this->terminateWithFailure($instance, $reason, $deferred);
+                }
+
+                $instance->markStepCompleted();
+                $instance->jumpToStep($targetIndex);
+                $this->repository->save($instance);
+                $this->defer($deferred, fn() => $this->events->dispatch(new StepTimedOut($instance->id, $awaitingSignal, $stepIndex, $route)));
+                $this->defer($deferred, fn() => $this->dispatchAdvanceJob($instance->id));
+
+                return $deferred;
+            }
+
             $reason = "Step timed out while waiting for signal '{$awaitingSignal}'.";
             $this->defer($deferred, fn() => $this->events->dispatch(new StepTimedOut($instance->id, $awaitingSignal, $stepIndex)));
 
@@ -498,6 +526,19 @@ final readonly class WorkflowEngine
         $this->defer($deferred, fn() => $this->events->dispatch(new WorkflowFailed($instance->id, $reason)));
 
         return $deferred;
+    }
+
+    /**
+     * The step a timed-out step routes to, or null when its timeout is fatal.
+     *
+     * @param  class-string  $stepClass
+     * @return class-string|null
+     */
+    private function timeoutRouteFor(string $stepClass): ?string
+    {
+        $step = $this->container->make($stepClass);
+
+        return $step instanceof TimeoutRoutingStep ? $step->timeoutTo() : null;
     }
 
     private function hasCompensatableSteps(WorkflowInstance $instance): bool
