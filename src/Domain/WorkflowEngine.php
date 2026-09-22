@@ -26,6 +26,7 @@ use JustSteveKing\WorkflowEngine\Events\StepCompleted;
 use JustSteveKing\WorkflowEngine\Events\StepFailed;
 use JustSteveKing\WorkflowEngine\Events\StepTimedOut;
 use JustSteveKing\WorkflowEngine\Events\WorkflowAwaitingSignal;
+use JustSteveKing\WorkflowEngine\Events\WorkflowCancelled;
 use JustSteveKing\WorkflowEngine\Events\WorkflowCompensating;
 use JustSteveKing\WorkflowEngine\Events\WorkflowCompleted;
 use JustSteveKing\WorkflowEngine\Events\WorkflowFailed;
@@ -222,14 +223,19 @@ final readonly class WorkflowEngine
      * Deliver a signal to a paused workflow instance.
      *
      * @param  array<string, mixed>  $signalData
+     * @param  string|null  $consumingStep  The step expected to consume this signal. When given, the
+     *                                      delivery is refused unless that step is in the instance's
+     *                                      pinned sequence and still at or ahead of the cursor, and
+     *                                      unless nothing of this name is already buffered.
      */
     public function signal(
         int|string $instanceId,
         string $signal,
         array $signalData = [],
         ?string $deliveredBy = null,
+        ?string $consumingStep = null,
     ): void {
-        $this->runDeferred($this->repository->transaction(function () use ($instanceId, $signal, $signalData, $deliveredBy): array {
+        $this->runDeferred($this->repository->transaction(function () use ($instanceId, $signal, $signalData, $deliveredBy, $consumingStep): array {
             $instance = $this->repository->findById($instanceId, lock: true);
             if (null === $instance) {
                 throw new WorkflowNotFoundException($instanceId);
@@ -238,6 +244,23 @@ final readonly class WorkflowEngine
             /** @var list<Closure> $deferred */
             $deferred = [];
 
+            /*
+             * Buffering means this method stops refusing anything short of a
+             * terminal instance, so a caller naming the step that will consume
+             * the signal gets that checked instead: the step has to be in this
+             * instance's pinned sequence, and the cursor must not have passed
+             * it. Without it a signal aimed at the wrong workflow, or at a
+             * decision already taken, is held rather than rejected and the
+             * caller is told it landed.
+             */
+            if (null !== $consumingStep) {
+                $targetIndex = $instance->indexOfStep($consumingStep);
+
+                if (null === $targetIndex || $targetIndex < $instance->stepIndex) {
+                    throw new InvalidSignalException($instanceId, $signal, $instance->awaitingSignal);
+                }
+            }
+
             if ($instance->isAwaiting() && $instance->awaitingSignal === $signal) {
                 $this->repository->recordSignal($instanceId, $signal, $signalData, $deliveredBy, consumed: true);
                 $stepClass = $instance->currentStepClass();
@@ -245,6 +268,17 @@ final readonly class WorkflowEngine
                 $this->defer($deferred, fn() => $this->events->dispatch(new SignalReceived($instance->id, $signal, $signalData, $deliveredBy, false)));
 
                 return $this->moveForwardFromAwait($instance, $stepClass, $deferred);
+            }
+
+            /*
+             * A second signal of the same name, held for the same await, can
+             * never be consumed: the engine takes the oldest and discards the
+             * rest at termination. Where two of them carry opposite verdicts,
+             * silently keeping the first is worse than refusing the second,
+             * so a caller that named its consuming step is told.
+             */
+            if (null !== $consumingStep && $this->repository->hasBufferedSignal($instanceId, $signal)) {
+                throw new InvalidSignalException($instanceId, $signal, $instance->awaitingSignal);
             }
 
             // Not awaiting this signal (yet). Buffer it so a later step can
@@ -328,6 +362,58 @@ final readonly class WorkflowEngine
             $this->defer($deferred, fn() => $this->events->dispatch(new StepTimedOut($instance->id, $awaitingSignal, $stepIndex)));
 
             return $this->terminateWithFailure($instance, $reason, $deferred);
+        }));
+    }
+
+    /**
+     * Stop a workflow instance that is not going to finish on its own.
+     *
+     * The operator escape hatch for an instance awaiting a signal that will
+     * never arrive — a webhook that was never sent, an approval nobody is
+     * going to give — where the alternative is faking the signal and letting
+     * the workflow act on a decision no one made.
+     *
+     * It terminates through the same path as any other failure, so a workflow
+     * with completed compensating steps rolls those back rather than simply
+     * stopping: cancelling a half-finished process usually means undoing what
+     * it already did. Cancelling something already finished does nothing.
+     */
+    public function cancel(int|string $instanceId, string $reason, ?string $cancelledBy = 'system'): void
+    {
+        $this->runDeferred($this->repository->transaction(function () use ($instanceId, $reason, $cancelledBy): array {
+            $instance = $this->repository->findById($instanceId, lock: true);
+            if (null === $instance) {
+                throw new WorkflowNotFoundException($instanceId);
+            }
+
+            /** @var list<Closure> $deferred */
+            $deferred = [];
+
+            if ($instance->status->isTerminal()) {
+                return $deferred;
+            }
+
+            /*
+             * Fail::from() does not accept Sleeping, and advance() is what
+             * normally wakes an instance. Cancelling has to do it here, or the
+             * escape hatch throws on exactly the instance an operator is most
+             * likely to be stopping.
+             */
+            if ($instance->isSleeping()) {
+                $instance->wake();
+            }
+
+            $this->repository->recordSignal(
+                $instanceId,
+                'cancelled',
+                ['reason' => $reason],
+                $cancelledBy,
+                consumed: true,
+            );
+
+            $this->defer($deferred, fn() => $this->events->dispatch(new WorkflowCancelled($instance->id, $reason, $cancelledBy)));
+
+            return $this->terminateWithFailure($instance, "Cancelled: {$reason}", $deferred);
         }));
     }
 
@@ -635,7 +721,7 @@ final readonly class WorkflowEngine
     private function dispatchAdvanceJob(int|string $instanceId, DateTimeInterface|int|null $delay = null): mixed
     {
         $job = new AdvanceWorkflow($instanceId);
-        $this->onWorkflowQueue($job);
+        $this->routeOntoWorkflowQueue($job);
 
         if ($delay instanceof DateTimeInterface || (is_int($delay) && $delay > 0)) {
             $job->delay($delay);
@@ -647,7 +733,7 @@ final readonly class WorkflowEngine
     private function dispatchTimeoutJob(int|string $instanceId, int $stepIndex, int $delaySeconds): mixed
     {
         $job = new TimeoutWorkflowStep($instanceId, $stepIndex);
-        $this->onWorkflowQueue($job);
+        $this->routeOntoWorkflowQueue($job);
         $job->delay(Carbon::now()->addSeconds($delaySeconds));
 
         return $this->bus->dispatch($job);
@@ -656,12 +742,18 @@ final readonly class WorkflowEngine
     private function dispatchCompensateJob(int|string $instanceId): mixed
     {
         $job = new CompensateWorkflow($instanceId);
-        $this->onWorkflowQueue($job);
+        $this->routeOntoWorkflowQueue($job);
 
         return $this->bus->dispatch($job);
     }
 
-    private function onWorkflowQueue(AdvanceWorkflow|CompensateWorkflow|TimeoutWorkflowStep $job): void
+    /**
+     * Put one of the engine's jobs on the connection and queue the engine
+     * uses. Public so a host dispatching them — a recovery sweep, a console
+     * command — routes them the same way rather than reimplementing it and
+     * drifting the first time a routing key is added.
+     */
+    public function routeOntoWorkflowQueue(AdvanceWorkflow|CompensateWorkflow|TimeoutWorkflowStep $job): void
     {
         $connection = $this->config->get('workflow-engine.queue.connection');
         $queue = $this->config->get('workflow-engine.queue.name');

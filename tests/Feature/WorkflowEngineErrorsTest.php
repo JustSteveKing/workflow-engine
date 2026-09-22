@@ -34,10 +34,11 @@ it('throws when the target instance is unknown', function (string $method): void
         'timeout' => fn() => $engine->timeout('999999', 0),
         'retry' => fn() => $engine->retry('999999'),
         'compensate' => fn() => $engine->compensate('999999'),
+        'cancel' => fn() => $engine->cancel('999999', 'irrelevant'),
     };
 
     expect($call)->toThrow(WorkflowNotFoundException::class);
-})->with(['advance', 'signal', 'timeout', 'retry', 'compensate']);
+})->with(['advance', 'signal', 'timeout', 'retry', 'compensate', 'cancel']);
 
 it('throws when starting an unregistered workflow', function (): void {
     $engine = errorEngine();

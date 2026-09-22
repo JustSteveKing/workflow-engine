@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace JustSteveKing\WorkflowEngine\Database\Factories;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 use JustSteveKing\WorkflowEngine\Domain\WorkflowStatus;
 use JustSteveKing\WorkflowEngine\Models\WorkflowInstance;
 
@@ -44,6 +46,34 @@ final class WorkflowInstanceFactory extends Factory
         return $this->state(fn(): array => [
             'status' => WorkflowStatus::Awaiting,
             'awaiting_signal' => $signal,
+        ]);
+    }
+
+    public function inProgress(): self
+    {
+        return $this->state(fn(): array => [
+            'status' => WorkflowStatus::InProgress->value,
+            'awaiting_signal' => null,
+            'failed_reason' => null,
+        ]);
+    }
+
+    public function sleeping(?CarbonInterface $wakeAt = null): self
+    {
+        return $this->state(fn(): array => [
+            'status' => WorkflowStatus::Sleeping->value,
+            'awaiting_signal' => null,
+            'wake_at' => $wakeAt ?? Carbon::now()->addHour(),
+            'failed_reason' => null,
+        ]);
+    }
+
+    public function compensating(string $reason = 'Rolling back'): self
+    {
+        return $this->state(fn(): array => [
+            'status' => WorkflowStatus::Compensating->value,
+            'awaiting_signal' => null,
+            'failed_reason' => $reason,
         ]);
     }
 

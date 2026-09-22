@@ -14,6 +14,7 @@ Every transition dispatches a domain event from `JustSteveKing\WorkflowEngine\Ev
 | `WorkflowCompleted` | The workflow finished. |
 | `WorkflowCompensating` | Saga rollback began. |
 | `StepCompensationFailed` | A step's `compensate()` threw during rollback. |
+| `WorkflowCancelled` | An operator stopped an instance. Dispatched before it terminates, so it can be told apart from the failure or compensation that follows |
 | `WorkflowFailed` | The workflow failed, after any compensation. |
 | `WorkflowRetried` | A failed instance was re-armed. |
 

@@ -17,6 +17,8 @@ Steps are resolved from the container, so constructor dependencies are injected 
 
 - `CustomRetryBackoff` gives you `retryBackoff(int $attempt): int` to override the configured backoff. See [timeouts and retries](timeouts-and-retries.md).
 - `CompensatingStep` gives you `compensate(WorkflowContext $context): void` to undo the step during saga rollback. See [failure and compensation](failure-and-compensation.md).
+- `TimeoutRoutingStep` gives you `timeoutTo(): string` to continue from another step when the wait expires, instead of failing. See [timeouts and retries](timeouts-and-retries.md).
+- `ContextualTimeout` gives you `timeoutSecondsFor(WorkflowContext $context): ?int` to compute the wait from the instance in front of you, rather than a fixed delay. See [timeouts and retries](timeouts-and-retries.md).
 
 Keep steps small, and keep them idempotent where you can. Under an at-least-once queue, a step can run more than once in rare failure windows. That is a property of the queue, not a bug in the engine, and no amount of locking removes it entirely.
 

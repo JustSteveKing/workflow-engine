@@ -57,7 +57,7 @@ src/
                         Transitions/ (Proceed, Await, Sleep, Complete, Compensate, Fail — the legal status table)
   Events/               WorkflowStarted, StepCompleted, StepFailed, SignalReceived, WorkflowAwaitingSignal,
                         StepTimedOut, WorkflowSlept, WorkflowCompleted, WorkflowCompensating, StepCompensationFailed,
-                        WorkflowFailed, WorkflowRetried
+                        WorkflowFailed, WorkflowRetried, WorkflowCancelled
   Models/               Eloquent WorkflowInstance, WorkflowSignal
   Repositories/         EloquentWorkflowRepository (default WorkflowRepository binding)
   Jobs/                 AdvanceWorkflow, TimeoutWorkflowStep, CompensateWorkflow
