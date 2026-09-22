@@ -10,6 +10,50 @@ The tagging matters more than it sounds. Without it, a timeout scheduled an hour
 
 Return `null` to wait indefinitely.
 
+## Deadlines that belong to the instance
+
+`timeoutSeconds()` takes no arguments, so it says "an hour after this step
+parks" and nothing more. Most real deadlines are not like that: an invoice is
+chased relative to its own due date, a trial ends on the date that customer
+signed up, a hold is released when the reservation it belongs to expires.
+
+A step implementing `ContextualTimeout` is asked per instance:
+
+```php
+final class AwaitPayment implements WorkflowStep, ContextualTimeout
+{
+    public function handle(WorkflowContext $context): StepResult
+    {
+        return StepResult::await('payment_received');
+    }
+
+    public function timeoutSecondsFor(WorkflowContext $context): ?int
+    {
+        $dueAt = CarbonImmutable::parse($context->get('due_at'));
+
+        return (int) CarbonImmutable::now()->diffInSeconds($dueAt, false);
+    }
+
+    public function timeoutSeconds(): ?int
+    {
+        return null;
+    }
+
+    public function maxAttempts(): int
+    {
+        return 1;
+    }
+}
+```
+
+It is checked before `timeoutSeconds()`, which stays the simple case, and the
+delay is measured from the moment the step parks. A deadline already past is
+clamped to zero so the timeout fires on the next pass rather than being
+scheduled into history. Return `null` to wait indefinitely.
+
+Note that the delay is fixed when the step parks. Changing a configured window
+afterwards does not move an instance that is already waiting on it.
+
 ## Deadlines that are not failures
 
 Failing is the right answer when the signal was supposed to arrive. It is the
