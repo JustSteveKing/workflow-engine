@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `WorkflowInstance::newFactory()` and `WorkflowSignal::newFactory()` declared `Factory<self>`, and `Factory`'s model type is invariant, so a subclass returning a factory for itself was not a compatible override. Now that the models are extendable, that sealed them again in practice: a host could extend the model but not give it a factory. Declared `Factory<covariant self>` at the use site.
+
 ### Added
 
 - `workflow:recover`, a scheduled sweep for instances stranded mid-flight in pending, in-progress or compensating with no job left to move them — a dispatch lost rather than delayed. `workflow:tick` covers sleeping instances, whose delay is known in advance; nothing covered these, and because a non-terminal instance still owns its aggregate, one stranded instance refuses every further change to whatever it is about.
