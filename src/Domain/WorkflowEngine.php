@@ -26,6 +26,7 @@ use JustSteveKing\WorkflowEngine\Events\StepCompleted;
 use JustSteveKing\WorkflowEngine\Events\StepFailed;
 use JustSteveKing\WorkflowEngine\Events\StepTimedOut;
 use JustSteveKing\WorkflowEngine\Events\WorkflowAwaitingSignal;
+use JustSteveKing\WorkflowEngine\Events\WorkflowCancelled;
 use JustSteveKing\WorkflowEngine\Events\WorkflowCompensating;
 use JustSteveKing\WorkflowEngine\Events\WorkflowCompleted;
 use JustSteveKing\WorkflowEngine\Events\WorkflowFailed;
@@ -361,6 +362,58 @@ final readonly class WorkflowEngine
             $this->defer($deferred, fn() => $this->events->dispatch(new StepTimedOut($instance->id, $awaitingSignal, $stepIndex)));
 
             return $this->terminateWithFailure($instance, $reason, $deferred);
+        }));
+    }
+
+    /**
+     * Stop a workflow instance that is not going to finish on its own.
+     *
+     * The operator escape hatch for an instance awaiting a signal that will
+     * never arrive — a webhook that was never sent, an approval nobody is
+     * going to give — where the alternative is faking the signal and letting
+     * the workflow act on a decision no one made.
+     *
+     * It terminates through the same path as any other failure, so a workflow
+     * with completed compensating steps rolls those back rather than simply
+     * stopping: cancelling a half-finished process usually means undoing what
+     * it already did. Cancelling something already finished does nothing.
+     */
+    public function cancel(int|string $instanceId, string $reason, ?string $cancelledBy = 'system'): void
+    {
+        $this->runDeferred($this->repository->transaction(function () use ($instanceId, $reason, $cancelledBy): array {
+            $instance = $this->repository->findById($instanceId, lock: true);
+            if (null === $instance) {
+                throw new WorkflowNotFoundException($instanceId);
+            }
+
+            /** @var list<Closure> $deferred */
+            $deferred = [];
+
+            if ($instance->status->isTerminal()) {
+                return $deferred;
+            }
+
+            /*
+             * Fail::from() does not accept Sleeping, and advance() is what
+             * normally wakes an instance. Cancelling has to do it here, or the
+             * escape hatch throws on exactly the instance an operator is most
+             * likely to be stopping.
+             */
+            if ($instance->isSleeping()) {
+                $instance->wake();
+            }
+
+            $this->repository->recordSignal(
+                $instanceId,
+                'cancelled',
+                ['reason' => $reason],
+                $cancelledBy,
+                consumed: true,
+            );
+
+            $this->defer($deferred, fn() => $this->events->dispatch(new WorkflowCancelled($instance->id, $reason, $cancelledBy)));
+
+            return $this->terminateWithFailure($instance, "Cancelled: {$reason}", $deferred);
         }));
     }
 

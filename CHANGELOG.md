@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `WorkflowEngine::cancel()` and `workflow:cancel`, for stopping an instance awaiting a signal that will never arrive without faking the signal and letting the workflow act on a decision nobody made. It terminates through the same path as any other failure, so completed compensating steps roll back rather than the instance simply stopping, and it wakes a sleeping instance first, which cannot transition to failed directly.
+- `WorkflowCancelled`, dispatched before the instance terminates so a listener can tell a cancellation from the `WorkflowFailed` or `WorkflowCompensating` that follows.
+
 - `signal()` takes an optional `$consumingStep`. Buffering means the method refuses nothing short of a terminal instance, so a caller naming the step expected to consume a signal gets that checked instead: the step must be in the instance's pinned sequence and still at or ahead of the cursor, and nothing of that name may already be buffered. Without it a signal aimed at the wrong workflow, or at a decision already taken, is held rather than rejected and the caller is told it landed. Untargeted delivery is unchanged.
 - `WorkflowRepository::hasBufferedSignal()`, supporting the above. **Breaking for custom persistence implementations**, which must add the method.
 
