@@ -222,14 +222,19 @@ final readonly class WorkflowEngine
      * Deliver a signal to a paused workflow instance.
      *
      * @param  array<string, mixed>  $signalData
+     * @param  string|null  $consumingStep  The step expected to consume this signal. When given, the
+     *                                      delivery is refused unless that step is in the instance's
+     *                                      pinned sequence and still at or ahead of the cursor, and
+     *                                      unless nothing of this name is already buffered.
      */
     public function signal(
         int|string $instanceId,
         string $signal,
         array $signalData = [],
         ?string $deliveredBy = null,
+        ?string $consumingStep = null,
     ): void {
-        $this->runDeferred($this->repository->transaction(function () use ($instanceId, $signal, $signalData, $deliveredBy): array {
+        $this->runDeferred($this->repository->transaction(function () use ($instanceId, $signal, $signalData, $deliveredBy, $consumingStep): array {
             $instance = $this->repository->findById($instanceId, lock: true);
             if (null === $instance) {
                 throw new WorkflowNotFoundException($instanceId);
@@ -238,6 +243,23 @@ final readonly class WorkflowEngine
             /** @var list<Closure> $deferred */
             $deferred = [];
 
+            /*
+             * Buffering means this method stops refusing anything short of a
+             * terminal instance, so a caller naming the step that will consume
+             * the signal gets that checked instead: the step has to be in this
+             * instance's pinned sequence, and the cursor must not have passed
+             * it. Without it a signal aimed at the wrong workflow, or at a
+             * decision already taken, is held rather than rejected and the
+             * caller is told it landed.
+             */
+            if (null !== $consumingStep) {
+                $targetIndex = $instance->indexOfStep($consumingStep);
+
+                if (null === $targetIndex || $targetIndex < $instance->stepIndex) {
+                    throw new InvalidSignalException($instanceId, $signal, $instance->awaitingSignal);
+                }
+            }
+
             if ($instance->isAwaiting() && $instance->awaitingSignal === $signal) {
                 $this->repository->recordSignal($instanceId, $signal, $signalData, $deliveredBy, consumed: true);
                 $stepClass = $instance->currentStepClass();
@@ -245,6 +267,17 @@ final readonly class WorkflowEngine
                 $this->defer($deferred, fn() => $this->events->dispatch(new SignalReceived($instance->id, $signal, $signalData, $deliveredBy, false)));
 
                 return $this->moveForwardFromAwait($instance, $stepClass, $deferred);
+            }
+
+            /*
+             * A second signal of the same name, held for the same await, can
+             * never be consumed: the engine takes the oldest and discards the
+             * rest at termination. Where two of them carry opposite verdicts,
+             * silently keeping the first is worse than refusing the second,
+             * so a caller that named its consuming step is told.
+             */
+            if (null !== $consumingStep && $this->repository->hasBufferedSignal($instanceId, $signal)) {
+                throw new InvalidSignalException($instanceId, $signal, $instance->awaitingSignal);
             }
 
             // Not awaiting this signal (yet). Buffer it so a later step can

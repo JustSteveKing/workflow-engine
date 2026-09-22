@@ -81,6 +81,13 @@ interface WorkflowRepository
     public function pullBufferedSignal(int|string $workflowInstanceId, string $signal): ?BufferedSignal;
 
     /**
+     * Whether a signal of this name is already buffered and unconsumed for an
+     * instance. Only one of them can ever be applied, so a caller that names
+     * its consuming step is refused rather than adding to the pile.
+     */
+    public function hasBufferedSignal(int|string $workflowInstanceId, string $signal): bool;
+
+    /**
      * Discard any buffered (unconsumed) signals for an instance. Called when the
      * instance reaches a terminal state and can no longer consume them.
      */

@@ -124,6 +124,15 @@ final class EloquentWorkflowRepository implements WorkflowRepository
         ]);
     }
 
+    public function hasBufferedSignal(int|string $workflowInstanceId, string $signal): bool
+    {
+        return WorkflowSignal::query()
+            ->where('workflow_instance_id', $workflowInstanceId)
+            ->where('signal', $signal)
+            ->whereNull('consumed_at')
+            ->exists();
+    }
+
     public function pullBufferedSignal(int|string $workflowInstanceId, string $signal): ?BufferedSignal
     {
         $buffered = WorkflowSignal::query()

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `signal()` takes an optional `$consumingStep`. Buffering means the method refuses nothing short of a terminal instance, so a caller naming the step expected to consume a signal gets that checked instead: the step must be in the instance's pinned sequence and still at or ahead of the cursor, and nothing of that name may already be buffered. Without it a signal aimed at the wrong workflow, or at a decision already taken, is held rather than rejected and the caller is told it landed. Untargeted delivery is unchanged.
+- `WorkflowRepository::hasBufferedSignal()`, supporting the above. **Breaking for custom persistence implementations**, which must add the method.
+
 - `ContextualTimeout`, an optional step interface whose `timeoutSecondsFor(WorkflowContext $context)` is asked for the instance in front of it. `timeoutSeconds()` takes no arguments, so it can express "an hour after this step parks" but not "three days after the date this particular order was promised" — the shape most real deadlines have. It is checked before `timeoutSeconds()`, which is unchanged for every step that does not implement it, and a deadline already past is clamped to zero rather than scheduled into the past.
 
 ### Added
